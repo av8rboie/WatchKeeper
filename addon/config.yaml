@@ -1,7 +1,7 @@
 # Keys verified against the HA add-on configuration reference
 # (contributors.home-assistant.io/apps/reference/configuration), Oct 2026.
 name: Data Hub
-version: "0.1.0"
+version: "0.1.1"
 slug: data_hub
 description: Dashboards, logbook and maintenance for the boat
 url: https://github.com/av8rboie/WatchKeeper
@@ -27,8 +27,6 @@ backup_exclude:
 options:
   # Replace with the Signal K add-on's hostname from its info page.
   signalk_url: "http://SIGNALK_ADDON_HOST:3000"
-  sounder_gpio: null
-  ups_gpio: null
   log_level: info
 schema:
   signalk_url: url
