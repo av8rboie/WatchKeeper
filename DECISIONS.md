@@ -337,3 +337,109 @@ Someone is likely at the Signal K admin page right after setup.
 **Fixed: stopping the Signal K client mid-connect crashed the process** with an
 unhandled WebSocket error. CI caught it; the client now keeps an error
 listener while it terminates.
+
+## M3: Logbook
+
+### Entries and amendments
+
+**Every change after an entry is written is an amendment, signed or not.** The
+schema's trigger already blocks updates to remarks and crew fields, so filling
+in sea state on an unsigned hourly entry is an amendment too. The form fills
+in the reason "Completed before signing" for unsigned entries; signed entries
+need a typed reason. Migration 003 adds more triggers: an entry can be signed
+once, its passage, event type and author never change, and amendments can't be
+edited or deleted.
+
+**Snapshot values can be amended**, not just remarks and crew fields. The
+amendment stores the old value as display text in the amending user's units
+(for example "7.4 kn"), and the snapshot itself never changes.
+
+**Crew fields carry forward from the latest entry of the passage** that had
+any, amendments applied. The entry records which fields were carried, and the
+detail screen marks them "carried forward".
+
+**One hourly entry per hour is enforced in the database** (a unique index on
+`ts` for hourly entries), not only in the scheduler. Only one passage can be
+active, also by index.
+
+**Events are logged with or without a passage.** Engine starts at the dock and
+4-hourly anchor entries have no passage. With no passage under way, the
+timeline lists all recent entries.
+
+**Event entries carry a full snapshot**, the same as hourly entries. Alarm
+entries also record the alarming path's value.
+
+### Scheduler and triggers
+
+**Hourly entries are stamped at the hour boundary in GPS time** (14:00:00.000),
+with the snapshot taken when the tick runs, up to a second later.
+
+**At anchor without a passage the grid is 00, 04, 08, 12, 16 and 20 UTC.**
+"Anchor down" means Signal K's `navigation.anchor.position` is set (or, from
+M5, an anchor watch is active).
+
+**Downtime is found from a heartbeat** saved every 30 s. On restart the
+scheduler waits up to 60 s for GPS time before deciding which boundaries it
+missed, then writes one system entry, for example "No entries 13:00 to 16:00
+UTC: data hub offline". The current hour is never back-filled.
+
+**Course change** compares the 5-minute average COG with the settled course;
+when they differ by more than 30° for 5 minutes, it logs the change and the new
+course becomes the settled one. It is off below 1 kn, where COG is noise.
+
+**Engine state** comes from `propulsion.*.state` when published, otherwise from
+RPM crossing 300. The first reading after startup is not an event.
+
+**The end-of-passage suggestion is only armed once the boat has been under way
+for 10 minutes**, so a passage started at the dock isn't told to end before it
+leaves. Suggestions show as a strip under the alarm banner; they never start or
+end a passage.
+
+**Waypoint arrival is not logged yet.** It needs Signal K's course API from a
+real chartplotter to build and test against.
+
+**GPS clock drift** over 5 s raises a system warning alarm, checked once a
+minute. Offshore, with no network time for the host, it will usually be on;
+the log uses GPS time either way.
+
+### Roles
+
+**Crew start, edit and end passages**, as well as writing, signing and
+amending entries. The spec lists passages under neither role; starting a
+passage is a watch task. Guests can't read the log ("guest reads dashboards
+only"). The full JSON backup is skipper-only.
+
+### Exports
+
+**PDF uses pdf-lib with the built-in Helvetica**, on US Letter landscape. The
+standard PDF fonts only cover Latin-1, so primes become apostrophes in the PDF.
+A day with more rows than fit continues on a second page marked "continued"
+rather than shrinking the text.
+
+**CSV** has a UTF-8 byte order mark so spreadsheet apps show the degree signs.
+Snapshot columns are the original values in the user's units; amendments are
+listed in their own column.
+
+**GPX** uses the 1-minute recorded positions. A gap over 5 minutes starts a new
+track segment.
+
+**The JSON backup leaves out** history samples, sessions, the migration ledger
+and PIN hashes.
+
+### Photos
+
+**Photos are resized in the browser** to 2048 px on the long edge (JPEG,
+quality 0.85) before upload, which keeps native image libraries out of the
+add-on. The server accepts JPEG, PNG and WebP up to 8 MB.
+
+### Formatting
+
+**Barometer readings have no thousands separator** (1012 hPa), everywhere.
+The timeline shows positions with decimal minutes to one place, as in the
+mockup.
+
+### Simulator
+
+**The simulator publishes a null anchor position when the anchor comes up**,
+as Signal K's anchor alarm does. It previously went quiet, which looked like
+the anchor was still down.

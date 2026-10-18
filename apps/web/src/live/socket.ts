@@ -174,6 +174,18 @@ export function useEventBridge(enabled: boolean): void {
         case 'dashboard.updated':
           void qc.invalidateQueries({ queryKey: ['dashboards'] });
           break;
+        case 'log.created':
+        case 'log.signed':
+        case 'log.amended':
+        case 'passage.started':
+        case 'passage.ended':
+          void qc.invalidateQueries({ queryKey: ['log'] });
+          void qc.invalidateQueries({ queryKey: ['passages'] });
+          break;
+        case 'passage.suggestStart':
+        case 'passage.suggestEnd':
+          qc.setQueryData(['passages', 'suggestion'], { suggestion: ev.payload });
+          break;
         default:
           break;
       }

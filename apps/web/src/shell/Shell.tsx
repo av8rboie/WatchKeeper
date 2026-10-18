@@ -6,6 +6,7 @@ import { useLive, useLiveValue, useNow } from '../live/socket';
 import { useTheme } from '../theme/theme';
 import { topAlarm, useAlarms, type ActiveAlarm } from './alarms';
 import { IconButton } from './components';
+import { PassageSuggestionStrip } from '../logbook/Passages';
 import {
   AnchorIcon,
   ChecklistIcon,
@@ -226,6 +227,7 @@ export function Shell({ children }: { children: ReactNode }) {
       <Sidebar />
       <div className="shell__column">
         <AlarmBanner />
+        <PassageSuggestionStrip />
         {reconnecting ? (
           <div className="offline-strip" role="status">
             Reconnecting to Data Hub. Values on screen go stale as their timeouts pass.

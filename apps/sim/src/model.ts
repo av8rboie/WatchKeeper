@@ -315,7 +315,8 @@ export class BoatModel {
       v[`propulsion.${id}.fuel.rate`] = e.fuelRate;
       v[`electrical.alternators.${id}.voltage`] = on ? 14.1 - (id === 'starboard' ? 0.1 : 0) : voltage;
     }
-    if (this.anchor) v['navigation.anchor.position'] = { latitude: this.anchor.latitude, longitude: this.anchor.longitude };
+    // Raising the anchor publishes null, as Signal K's anchor alarm does, rather than going quiet.
+    v['navigation.anchor.position'] = this.anchor ? { latitude: this.anchor.latitude, longitude: this.anchor.longitude } : null;
     for (const [path, o] of this.overrides) {
       if (o === DEAD) delete v[path];
       else v[path] = o;

@@ -11,6 +11,15 @@ export const ELEVATION_TTL_MS = 12 * 3600_000;
 /** Update last_seen at most this often per user. */
 const SEEN_THROTTLE_MS = 60_000;
 
+/** The skipper's unit preferences: the units for text the backend writes (alarm messages, log remarks). */
+export function skipperPrefs(db: DB): UnitPrefs {
+  const row = db.prepare("SELECT unit_prefs FROM user WHERE role = 'skipper' AND mapped = 1 ORDER BY created_at LIMIT 1").get() as
+    | { unit_prefs: string }
+    | undefined;
+  const parsed = row ? UnitPrefsSchema.safeParse({ ...DEFAULT_UNIT_PREFS, ...(JSON.parse(row.unit_prefs) as object) }) : null;
+  return parsed?.success ? parsed.data : DEFAULT_UNIT_PREFS;
+}
+
 export interface UserRecord {
   id: string;
   name: string;

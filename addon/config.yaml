@@ -1,7 +1,7 @@
 # Keys verified against the HA add-on configuration reference
 # (contributors.home-assistant.io/apps/reference/configuration), Oct 2026.
 name: Data Hub
-version: "0.1.1"
+version: "0.2.0"
 slug: data_hub
 description: Dashboards, logbook and maintenance for the boat
 url: https://github.com/av8rboie/WatchKeeper

@@ -15,7 +15,7 @@ leaves open are in `DECISIONS.md`. Mockups are in `design/mockups/`.
 | --- | --- |
 | M1 Foundation | Built for HAOS. Automated criteria pass; HAOS VM install and on-boat checks pending. |
 | M2 Dashboards | Built against the Signal K simulator. Automated criteria pass; on-boat checks pending. |
-| M3 Logbook | Not started |
+| M3 Logbook | Built against the simulator. Automated criteria pass; overnight on-boat passage pending. |
 | M4 Maintenance | Not started |
 | M5 Anchor watch and checklists | Not started |
 | M6 Hardening | Not started |
@@ -32,7 +32,7 @@ Access Requests, and claim the skipper role on first open.
 ```
 repository.yaml   HA add-on repository manifest
 addon/            config.yaml, Dockerfile, run.sh, snapshot hook, docs, images
-apps/server       Fastify backend: Signal K client, recorder, alarms, derived values, ingress auth, REST, live WebSocket
+apps/server       Fastify backend: Signal K client, recorder, alarms, derived values, logbook, ingress auth, REST, live WebSocket
 apps/web          React app, served by the backend under the ingress path
 apps/sim          Signal K simulator for dev and tests (never in the add-on image)
 packages/shared   Zod schemas, path catalog with rate classes, unit conversion

@@ -9,6 +9,8 @@ import { getSetting, openDb } from './db/index.js';
 import { DerivedEngine } from './derived/engine.js';
 import { restoreIfMissing } from './db/snapshot.js';
 import type { HaClient } from './ha/client.js';
+import { LogScheduler } from './log/scheduler.js';
+import { EventTriggers } from './log/triggers.js';
 import { Recorder } from './recorder/recorder.js';
 import { SignalKClient, subscriptionsFor } from './signalk/client.js';
 import { DEVICE_TOKEN, readToken, stepAccessRequest, type AccessState } from './signalk/deviceAuth.js';
@@ -88,6 +90,10 @@ export async function createRuntime(opts: RuntimeOptions) {
 
   const recorder = new Recorder(db, store, clock);
   const derived = new DerivedEngine(db, store, clock, (values) => signalk.send(values));
+  const { logbook, alarms } = app.ctx;
+  const scheduler = new LogScheduler({ db, logbook, store, clock, time, alarms });
+  const triggers = new EventTriggers({ db, store, clock, time, hub, logbook });
+  app.ctx.triggers = triggers;
   let regTimer: NodeJS.Timeout | null = null;
   let regAttempts = 0;
 
@@ -109,6 +115,8 @@ export async function createRuntime(opts: RuntimeOptions) {
     signalk,
     recorder,
     derived,
+    scheduler,
+    triggers,
     time,
     start() {
       signalk.start();
@@ -116,9 +124,13 @@ export async function createRuntime(opts: RuntimeOptions) {
       recorder.start();
       derived.start();
       app.ctx.alarms.start();
+      scheduler.start();
+      triggers.start();
     },
     async stop() {
       if (regTimer) clearTimeout(regTimer);
+      triggers.stop();
+      scheduler.stop();
       app.ctx.alarms.stop();
       derived.stop();
       recorder.stop();

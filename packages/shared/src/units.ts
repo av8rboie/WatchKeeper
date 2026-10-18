@@ -226,6 +226,7 @@ export function formatValue(quantity: Quantity, si: unknown, prefs: UnitPrefs, d
     return { text: deg.toFixed(dp), unit: '°', side };
   }
   const c = converterFor(quantity, prefs);
-  const text = c.toDisplay(si).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+  // Barometer readings are written without a thousands separator: 1012 hPa, not 1,012.
+  const text = c.toDisplay(si).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp, useGrouping: quantity !== 'pressure' });
   return { text, unit: c.unit };
 }

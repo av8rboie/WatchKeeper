@@ -9,6 +9,7 @@ import '@fontsource/ibm-plex-mono/latin-500.css';
 import './theme/tokens.css';
 import './theme/app.css';
 import './theme/dashboards.css';
+import './theme/logbook.css';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';

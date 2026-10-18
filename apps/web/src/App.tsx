@@ -4,6 +4,10 @@ import { useMe, useSetupStatus } from './api/client';
 import { DashboardEdit } from './dashboards/DashboardEdit';
 import { DashboardsIndex, DashboardView } from './dashboards/DashboardView';
 import { useEventBridge } from './live/socket';
+import { EntryDetailScreen } from './logbook/EntryDetail';
+import { LogbookScreen } from './logbook/Logbook';
+import { PassageDetailScreen, PassagesScreen } from './logbook/Passages';
+import { QuickEntryScreen } from './logbook/QuickEntry';
 import { HelmPinScreen } from './screens/HelmPin';
 import { MoreScreen } from './screens/More';
 import { Placeholder } from './screens/Placeholder';
@@ -33,10 +37,11 @@ export function App() {
       <Route path="/d" element={page(<DashboardsIndex />)} />
       <Route path="/d/:dashboardId" element={page(<DashboardView />)} />
       <Route path="/d/:dashboardId/edit" element={page(<DashboardEdit />)} />
-      <Route path="/log" element={page(<Placeholder title="Logbook" milestone="M3" what="Logbook timeline for the active passage." />)} />
-      <Route path="/log/new" element={page(<Placeholder title="Quick entry" milestone="M3" what="Quick log entry." />)} />
-      <Route path="/log/:entryId" element={page(<Placeholder title="Log entry" milestone="M3" what="Entry detail, signing and amendments." />)} />
-      <Route path="/passages/*" element={page(<Placeholder title="Passages" milestone="M3" what="Passage list, summary and export." />)} />
+      <Route path="/log" element={page(<LogbookScreen />)} />
+      <Route path="/log/new" element={page(<QuickEntryScreen />)} />
+      <Route path="/log/:entryId" element={page(<EntryDetailScreen />)} />
+      <Route path="/passages" element={page(<PassagesScreen />)} />
+      <Route path="/passages/:id" element={page(<PassageDetailScreen />)} />
       <Route path="/maintenance/*" element={page(<Placeholder title="Maintenance" milestone="M4" what="Due list, equipment, parts and pre-departure view." />)} />
       <Route path="/anchor" element={page(<Placeholder title="Anchor watch" milestone="M5" what="Swing circle, drag alarm and GPS-loss alarm." />)} />
       <Route path="/checklists/*" element={page(<Placeholder title="Checklists" milestone="M5" what="Checklist runs that write to the log." />)} />

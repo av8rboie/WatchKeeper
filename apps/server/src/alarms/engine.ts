@@ -1,13 +1,6 @@
-import {
-  DEFAULT_UNIT_PREFS,
-  describePath,
-  formatValue,
-  UnitPrefsSchema,
-  type ActiveAlarm,
-  type Threshold,
-  type UnitPrefs,
-} from '@watchkeeper/shared';
+import { describePath, formatValue, type ActiveAlarm, type AlarmState, type Snapshot, type Threshold, type UnitPrefs } from '@watchkeeper/shared';
 import type { EventHub } from '../api/events.js';
+import { skipperPrefs } from '../auth/users.js';
 import { iso, type Clock } from '../clock.js';
 import type { DB } from '../db/index.js';
 import type { HaClient } from '../ha/client.js';
@@ -26,7 +19,8 @@ type Level = 0 | 1 | 2;
 
 interface Active {
   alarm: ActiveAlarm;
-  threshold: Threshold;
+  /** Null for system alarms (raised by raiseSystem, not by a threshold). */
+  threshold: Threshold | null;
   level: 1 | 2;
   /** When the value first satisfied the clear condition; null while it doesn't. */
   clearSince: number | null;
@@ -42,6 +36,8 @@ export interface AlarmEngineDeps {
   ha: HaClient;
   /** Write to Signal K (notifications.app.*). Absent in tests without Signal K. */
   sendToSignalK?: (values: OutboundValue[]) => void;
+  /** Write the alarm's event log entry. Defaults to a bare insert; the app passes the logbook's writer. */
+  writeLog?: (e: { eventType: string; remarks: string; createdBy: string | null; extra: Snapshot }) => void;
   log?: { warn(msg: string): void };
 }
 
@@ -109,6 +105,7 @@ export class AlarmEngine {
     for (const t of list) this.byPath.set(t.path, [...(this.byPath.get(t.path) ?? []), t]);
     const current = new Map(list.map((t) => [t.id, t]));
     for (const [id, a] of this.active) {
+      if (a.threshold === null) continue;
       const t = current.get(id);
       if (!t || JSON.stringify(t) !== JSON.stringify(a.threshold)) this.clear(id, 'Threshold changed');
     }
@@ -139,6 +136,37 @@ export class AlarmEngine {
     a.alarm.snoozedUntil = iso(this.deps.clock.now() + minutes * 60_000);
     this.effects(a, 'snoozed', userId);
     return { ...a.alarm };
+  }
+
+  /**
+   * Raise or update an alarm no threshold owns (e.g. GPS and host clocks
+   * disagreeing). A new message alone doesn't re-raise; escalating does.
+   */
+  raiseSystem(id: string, title: string, message: string, state: AlarmState = 'warn'): void {
+    const level = state === 'warn' ? 1 : 2;
+    const existing = this.active.get(id);
+    if (existing) {
+      if (existing.threshold !== null) return;
+      existing.alarm.message = message;
+      if (level > existing.level) {
+        existing.level = 2;
+        Object.assign(existing.alarm, { state, acked: false, snoozedUntil: null, raisedAt: iso(this.deps.time.read().now) });
+        this.effects(existing, 'raised', null);
+      }
+      return;
+    }
+    const a: Active = {
+      threshold: null,
+      level,
+      clearSince: null,
+      alarm: { id, source: 'system', path: null, title, message, state, raisedAt: iso(this.deps.time.read().now), acked: false, snoozedUntil: null },
+    };
+    this.active.set(id, a);
+    this.effects(a, 'raised', null);
+  }
+
+  clearSystem(id: string, message: string): void {
+    if (this.active.get(id)?.threshold === null) this.clear(id, message);
   }
 
   evaluate(t: Threshold, now: number): void {
@@ -216,19 +244,22 @@ export class AlarmEngine {
     const { alarm } = a;
     this.deps.hub.broadcast(what === 'raised' ? 'alarm.raised' : 'alarm.acked', { ...alarm });
     this.notifySignalK(a);
-    const time = this.deps.time.read();
+    const path = a.threshold?.path ?? null;
+    const remarks =
+      what === 'raised'
+        ? `${alarm.title}: ${alarm.message}`
+        : `${alarm.title}: ${what === 'acked' ? 'acknowledged' : `snoozed until ${alarm.snoozedUntil}`}`;
+    const extra: Snapshot = {};
+    if (path) {
+      const v = value ?? this.deps.store.fresh(path);
+      extra[path] = typeof v === 'number' || typeof v === 'string' ? v : null;
+    }
     try {
-      writeLogEntry(this.deps.db, {
-        ts: time.now,
-        kind: 'event',
-        eventType: `alarm_${what}`,
-        snapshot: { [a.threshold.path]: value ?? this.deps.store.fresh(a.threshold.path), clock_source: time.source },
-        remarks:
-          what === 'raised'
-            ? `${alarm.title}: ${alarm.message}`
-            : `${alarm.title}: ${what === 'acked' ? 'acknowledged' : `snoozed until ${alarm.snoozedUntil}`}`,
-        createdBy: userId,
-      });
+      if (this.deps.writeLog) this.deps.writeLog({ eventType: `alarm_${what}`, remarks, createdBy: userId, extra });
+      else {
+        const time = this.deps.time.read();
+        writeLogEntry(this.deps.db, { ts: time.now, kind: 'event', eventType: `alarm_${what}`, snapshot: { ...extra, clockSource: time.source }, remarks, createdBy: userId });
+      }
     } catch (e) {
       this.deps.log?.warn(`Could not write alarm log entry: ${(e as Error).message}`);
     }
@@ -273,10 +304,6 @@ export class AlarmEngine {
   }
 
   private prefs(): UnitPrefs {
-    const row = this.deps.db.prepare("SELECT unit_prefs FROM user WHERE role = 'skipper' AND mapped = 1 ORDER BY created_at LIMIT 1").get() as
-      | { unit_prefs: string }
-      | undefined;
-    const parsed = row ? UnitPrefsSchema.safeParse(JSON.parse(row.unit_prefs)) : null;
-    return parsed?.success ? parsed.data : DEFAULT_UNIT_PREFS;
+    return skipperPrefs(this.deps.db);
   }
 }

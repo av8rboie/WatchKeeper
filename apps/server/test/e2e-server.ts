@@ -49,6 +49,19 @@ rt.app.post('/__test/sim/control', async (req) => {
   sim.control(req.body as Parameters<SimServer['control']>[0]);
   return sim.state();
 });
+// The logbook runs on the hour; tests can't wait for one. Writes an entry as the scheduler or a trigger would.
+rt.app.post('/__test/log/entry', async (req) => {
+  const b = req.body as { kind: 'hourly' | 'event'; eventType?: string; remarks?: string; minutesAgo?: number };
+  const now = rt.time.read().now;
+  const back = (b.minutesAgo ?? 0) * 60_000;
+  const ts = b.kind === 'hourly' ? Math.floor((now - back) / 3_600_000) * 3_600_000 : now - back;
+  return rt.app.ctx.logbook.write({ kind: b.kind, eventType: b.eventType ?? null, remarks: b.remarks ?? null, ts });
+});
+rt.app.post('/__test/log/suggest', async (req) => {
+  const b = req.body as { kind: 'start' | 'end'; reason: string };
+  rt.triggers.suggest(b.kind, b.reason);
+  return { ok: true };
+});
 
 rt.start();
 await rt.app.listen({ host: '127.0.0.1', port: backendPort });

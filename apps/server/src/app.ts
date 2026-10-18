@@ -13,6 +13,7 @@ import { registerAuthRoutes } from './api/auth.js';
 import { registerDashboardRoutes } from './api/dashboards.js';
 import type { EventHub } from './api/events.js';
 import { registerHistoryRoutes } from './api/history.js';
+import { registerLogbookRoutes } from './api/logbook.js';
 import { registerPathRoutes } from './api/paths.js';
 import { registerSystemRoutes } from './api/system.js';
 import { Dashboards } from './dashboards/store.js';
@@ -21,6 +22,8 @@ import type { Clock } from './clock.js';
 import type { Config } from './config.js';
 import type { DB } from './db/index.js';
 import type { HaClient } from './ha/client.js';
+import { Logbook } from './log/logbook.js';
+import type { EventTriggers } from './log/triggers.js';
 import type { SignalKClient } from './signalk/client.js';
 import type { LiveStore } from './signalk/store.js';
 import type { TimeSource } from './signalk/time.js';
@@ -87,6 +90,9 @@ export interface AppContext extends AppDeps {
   dashboards: Dashboards;
   thresholds: Thresholds;
   alarms: AlarmEngine;
+  logbook: Logbook;
+  /** Event triggers and passage suggestions; set by the runtime once started. */
+  triggers: EventTriggers | null;
   /** Every API route and its minimum role. The role tests walk this list. */
   routes: RouteInfo[];
 }
@@ -107,6 +113,7 @@ export async function buildApp(deps: AppDeps, opts: { logger?: boolean | object 
   const users = new Users(deps.db, deps.clock);
   const elevations = new Elevations(deps.db, deps.clock);
   const thresholds = new Thresholds(deps.db, deps.clock);
+  const logbook = new Logbook({ db: deps.db, store: deps.store, clock: deps.clock, time: deps.time, hub: deps.hub });
   const alarms = new AlarmEngine({
     db: deps.db,
     store: deps.store,
@@ -116,9 +123,10 @@ export async function buildApp(deps: AppDeps, opts: { logger?: boolean | object 
     thresholds,
     ha: deps.ha,
     sendToSignalK: deps.signalk ? (values) => deps.signalk!.send(values) : undefined,
+    writeLog: (e) => void logbook.write({ kind: 'event', ...e }),
     log: { warn: (msg) => app.log.warn(msg) },
   });
-  const ctx: AppContext = { ...deps, users, elevations, dashboards: new Dashboards(deps.db, deps.clock), thresholds, alarms, routes: [] };
+  const ctx: AppContext = { ...deps, users, elevations, dashboards: new Dashboards(deps.db, deps.clock), thresholds, alarms, logbook, triggers: null, routes: [] };
   app.decorate('ctx', ctx);
   const trusted = new Set(deps.config.trustedProxies.map(normalizeAddress));
 
@@ -204,6 +212,7 @@ export async function buildApp(deps: AppDeps, opts: { logger?: boolean | object 
       registerDashboardRoutes(api, ctx);
       registerAlarmRoutes(api, ctx);
       registerHistoryRoutes(api, ctx);
+      await registerLogbookRoutes(api, ctx);
       api.get('/events', { websocket: true, config: { minRole: 'guest' } }, (socket) => deps.hub.add(socket));
     },
     { prefix: API_PREFIX },
