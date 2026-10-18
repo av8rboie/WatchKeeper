@@ -76,8 +76,12 @@ export class SignalKClient extends EventEmitter {
     this.stopped = true;
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
-    this.ws?.removeAllListeners();
-    this.ws?.terminate();
+    if (this.ws) {
+      this.ws.removeAllListeners();
+      // Terminating a socket that is still connecting emits 'error'; with no listener that would throw.
+      this.ws.on('error', () => {});
+      this.ws.terminate();
+    }
     this.ws = null;
     this.connected = false;
   }

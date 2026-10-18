@@ -1,9 +1,10 @@
 import { useEffect, useRef, type ReactNode } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { api, useSystemStatus } from '../api/client';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { roleAtLeast } from '@watchkeeper/shared';
+import { api, useMe, useSystemStatus } from '../api/client';
 import { useLive, useLiveValue, useNow } from '../live/socket';
 import { useTheme } from '../theme/theme';
-import { topAlarm, useAlarms } from './alarms';
+import { topAlarm, useAlarms, type ActiveAlarm } from './alarms';
 import { IconButton } from './components';
 import {
   AnchorIcon,
@@ -177,9 +178,16 @@ function useAlarmTone(active: boolean): void {
 
 /** Full-width, top of the screen, pushes content down. */
 function AlarmBanner() {
-  const alarm = topAlarm(useAlarms((s) => s.alarms));
+  // Re-evaluated every second so a snooze running out brings the banner back.
+  const now = useNow(1000);
+  const alarm = topAlarm(useAlarms((s) => s.alarms), now);
+  const role = useMe().data?.role ?? 'guest';
   useAlarmTone(alarm !== null && !alarm.acked);
   if (!alarm) return null;
+  const act = (what: 'ack' | 'snooze') =>
+    void api<ActiveAlarm>(`/alarms/${alarm.id}/${what}`, { method: 'POST', body: what === 'snooze' ? { minutes: 2 } : undefined })
+      .then((a) => useAlarms.getState().upsert(a))
+      .catch(() => undefined);
   const at = new Date(alarm.raisedAt);
   return (
     <div className="alarm-banner" role="alert">
@@ -190,14 +198,23 @@ function AlarmBanner() {
         </span>
       </div>
       <div className="alarm-banner__message">{alarm.message}</div>
-      <div className="alarm-banner__actions">
-        <button type="button" className="alarm-banner__ack" disabled={alarm.acked} onClick={() => void api(`/alarms/${alarm.id}/ack`, { method: 'POST' })}>
-          {alarm.acked ? 'Acknowledged' : 'Acknowledge'}
-        </button>
-        <button type="button" className="alarm-banner__snooze" onClick={() => void api(`/alarms/${alarm.id}/snooze`, { method: 'POST', body: { minutes: 2 } })}>
-          Snooze 2 min
-        </button>
-      </div>
+      {roleAtLeast(role, 'crew') ? (
+        <div className="alarm-banner__actions">
+          <button type="button" className="alarm-banner__ack" disabled={alarm.acked} onClick={() => act('ack')}>
+            {alarm.acked ? 'Acknowledged' : 'Acknowledge'}
+          </button>
+          <button type="button" className="alarm-banner__snooze" onClick={() => act('snooze')}>
+            Snooze 2 min
+          </button>
+        </div>
+      ) : (
+        <div className="alarm-banner__actions">
+          {/* Silencing is a crew action; a guest helm device signs in with a crew PIN. */}
+          <Link to="/login" className="alarm-banner__snooze">
+            Sign in with PIN to silence
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

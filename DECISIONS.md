@@ -208,3 +208,132 @@ screenshots to `apps/web/test/screenshots/`.
 aarch64 image, and anything on the boat. The amd64 image was built and run
 locally: options, health, the ingress-only rejection and the snapshot hook
 all behaved.
+
+## M2: Dashboards
+
+### Signal K simulator
+
+**There is no Signal K server or instrument data yet, so M2 was built and
+tested against a simulator** (`apps/sim`). It models a 45 ft cruising
+catamaran: wind, a simple polar for sailing, motoring at 2,200 rpm, a 0.4 kn
+current, engines (coolant warm-up, oil pressure, fuel burn, hours),
+alternators, a 600 Ah house bank with solar on a sun curve, three tanks, a
+falling barometer on passage, and depth that runs out of sounder range
+offshore. The default `mixed` scenario anchors, motors out, sails for four
+hours, motors in and anchors again, repeating every 6 hours. Every number is
+invented for testing; none of it is the skipper's boat.
+
+**It speaks the parts of the protocol Data Hub uses:** discovery, the v1
+stream with subscribe periods and wildcards, the REST tree, and device access
+requests. Like Signal K 2.33 with security on, an unauthenticated stream gets
+the hello and nothing else. Approval is automatic by default. Tokens carry a
+fixed prefix, so they survive a simulator restart the way a real server's do.
+
+**Deterministic.** Same seed and start time, same values, so tests can assert
+on them. Overrides fix a path to a value, or stop it publishing (a dead
+sensor), through `POST /sim/control`.
+
+**Dev only.** `pnpm dev` runs it on port 3100 (not 3000, so it never collides
+with a real Signal K left running); `pnpm dev -- --real-signalk` uses Signal K
+in Docker instead. It is a dev dependency of the server and is not in the
+add-on image. The M1 replay tests keep their hand-checkable fixture generator.
+
+### Layouts and widgets
+
+**Grid row height is 112 px**, not the mockup's 104 px tile: at 104 px the
+44 px numerals overhang the label above them. Gaps are 8 px on phone, 12 px on
+tablet and 16 px on desktop.
+
+**Every save stores complete layouts for all three breakpoints.** A widget
+missing from a breakpoint is placed at the bottom once, when saved, so it
+never moves on its own later. `PUT /dashboards/:id/layouts` replaces only the
+breakpoints it is given. Widgets got a `sort` column (migration 002) because
+the phone order and auto-placement follow it.
+
+**Imported or copied dashboards get fresh widget ids**, with their layouts
+remapped, since widget ids are global keys.
+
+**Widget settings are declarative.** Each widget file exports its component,
+defaults and a list of setting fields; one editor renders them. Numbers tied
+to a path are typed in the user's units and stored in SI.
+
+**Edit mode saves as you go**: layout changes after 400 ms, widget changes
+after 600 ms, queued in order. The canvas is drawn 390 px wide for the phone
+layout and 768 px for tablet.
+
+**Min/max since reset and "Keep screen on" are per device**, in localStorage,
+like the theme.
+
+**Link widgets accept only http and https addresses.** Anything else would run
+in the app's own origin.
+
+**The trend chart** reads token colors when it draws (uPlot uses a canvas),
+always spans the whole window, and never zooms in tighter than 2 display
+units, so sensor noise doesn't fill the chart.
+
+**Catalog additions**: alternator voltage per engine (the twin widget's "Alt"
+row) and tank capacity. Capacity is static configuration, so it is never
+stale and never recorded.
+
+### Thresholds and alarms
+
+**One threshold per path** (unique index). Widget settings and the settings
+list edit the same limits.
+
+**"2% of the range" is read as 2% of the span between the threshold's own
+limits**, or of the single limit's magnitude when there is only one. The
+value has to stay past the limit by that margin for 10 s to clear.
+
+**Warn escalating to alarm is a new raise** (unacknowledged, snooze cancelled,
+logged). Alarm easing to warn is not a raise; the banner just changes.
+
+**A stale value leaves an alarm as it is.** A dead sensor neither raises nor
+clears anything; staleness shows on the tile.
+
+**Acknowledge and snooze need crew.** The spec's rule that guests get 403 on
+every write applies. A guest helm device sees "Sign in with PIN to silence"
+on the banner instead of the buttons.
+
+**Alarm state is in memory.** After a restart, alarms are raised again from
+current values; acknowledgements and snoozes are not kept. Every raise,
+acknowledge and snooze is in the log.
+
+**Each raise, acknowledge and snooze writes an event log entry** with the
+triggering value and the clock source. The full snapshot comes with M3's
+snapshot builder.
+
+**Signal K notification path is `notifications.app.dataHub.<threshold id>`.**
+The HA companion app notification goes out for alarm-class raises only, not
+warnings.
+
+**No default thresholds.** Depth, engine temperature and the like are safety
+limits for the skipper to set, as the spec requires. The depth widget's
+shallow mark is empty for the same reason.
+
+### Derived values
+
+**Fuel aboard** is each fuel tank's `currentVolume`, or `currentLevel` times
+`capacity`.
+
+**Time to empty uses a house bank capacity setting**, 400 Ah until the skipper
+confirms the real figure in settings, and the 50% floor from the spec.
+Signal K reports capacity in joules when it reports it at all.
+
+**Distance run is saved every 60 s**, so a power cut loses at most a minute of
+it. A jump faster than 1 nm per second is ignored.
+
+**The 24-hour run and the 3-hour pressure tendency come from recorded
+history**, so they survive restarts. Both are empty until there is enough
+history.
+
+**A derived value whose inputs are stale is not computed**, so it goes stale
+too. It is never published as zero.
+
+### Other
+
+**Device approval is polled every 2 s for the first minute**, then every 10 s.
+Someone is likely at the Signal K admin page right after setup.
+
+**Fixed: stopping the Signal K client mid-connect crashed the process** with an
+unhandled WebSocket error. CI caught it; the client now keeps an error
+listener while it terminates.

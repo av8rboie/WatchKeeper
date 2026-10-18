@@ -3,12 +3,13 @@ import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import type { Me } from '@watchkeeper/shared';
 import { api, ApiError, useMe, useSetupStatus, useSystemStatus } from '../api/client';
+import { useDashboardMutations } from '../dashboards/api';
 import { RoleMapping } from '../settings/RoleMapping';
 import { UnitsForm } from '../settings/UnitsForm';
 import { Card, PrimaryButton, StatusPill } from '../shell/components';
 
-type Step = 'claim' | 'signalk' | 'roles' | 'units';
-const STEPS: Step[] = ['claim', 'signalk', 'roles', 'units'];
+type Step = 'claim' | 'signalk' | 'roles' | 'units' | 'dashboards';
+const STEPS: Step[] = ['claim', 'signalk', 'roles', 'units', 'dashboards'];
 
 /** First run: claim the skipper role, approve the Signal K device, map HA users to roles, units. */
 export function SetupScreen() {
@@ -36,9 +37,10 @@ export function SetupScreen() {
         ) : null}
         {step === 'units' ? (
           <Card title="Your units">
-            <UnitsForm submitLabel="Finish setup" onSaved={() => navigate('/', { replace: true })} />
+            <UnitsForm submitLabel="Save and continue" onSaved={() => setStep('dashboards')} />
           </Card>
         ) : null}
+        {step === 'dashboards' ? <StarterStep onDone={() => navigate('/', { replace: true })} /> : null}
       </div>
     </main>
   );
@@ -66,6 +68,48 @@ function ClaimStep({ name, onDone }: { name: string; onDone(): void }) {
         </p>
         {error ? <div className="field__error" role="alert">{error}</div> : null}
         <PrimaryButton onClick={() => void claim()}>I am the skipper</PrimaryButton>
+      </div>
+    </Card>
+  );
+}
+
+/** Helm, Engines, Energy and Anchor, from the paths Signal K is publishing now. */
+function StarterStep({ onDone }: { onDone(): void }) {
+  const { starter } = useDashboardMutations();
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const make = async () => {
+    setBusy(true);
+    try {
+      const made = await starter();
+      if (made.length === 0) {
+        setError('Signal K is not publishing anything yet. You can create starter dashboards later from the Dashboards screen.');
+        return;
+      }
+      onDone();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Could not create dashboards.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Card title="Starter dashboards">
+      <div className="stack">
+        <p style={{ margin: 0 }}>Data Hub can set up Helm, Engines, Energy and Anchor dashboards using only the paths Signal K is publishing right now. Edit them any time.</p>
+        {error ? (
+          <div className="field__error" role="alert">
+            {error}
+          </div>
+        ) : null}
+        <div className="row" style={{ gap: 10 }}>
+          <PrimaryButton onClick={() => void make()} disabled={busy}>
+            Create starter dashboards
+          </PrimaryButton>
+          <button type="button" className="button" onClick={onDone}>
+            Skip and finish
+          </button>
+        </div>
       </div>
     </Card>
   );

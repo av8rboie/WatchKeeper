@@ -22,11 +22,12 @@ test.describe('shell under an ingress path', () => {
   test('loads, navigates and fetches only under the random prefix', async ({ page }, info) => {
     const urls = trackRequests(page);
     await page.goto('');
-    await expect(page).toHaveURL(new RegExp(`${PREFIX}/d$`));
-    await expect(page.getByRole('heading', { name: 'Dashboards' })).toBeVisible();
+    // / goes to the dashboards: the last viewed, the first, or the empty state.
+    await expect(page).toHaveURL(new RegExp(`${PREFIX}/d(/[A-Za-z0-9]+)?$`));
+    const nav = info.project.name === 'phone' ? page.locator('nav.tabbar') : page.locator('nav.sidebar');
+    await expect(nav.getByRole('link', { name: 'Dashboards' })).toHaveAttribute('aria-current', 'page');
     await page.screenshot({ path: `${SHOTS}/${info.project.name}-dashboards-day.png` });
 
-    const nav = info.project.name === 'phone' ? page.locator('nav.tabbar') : page.locator('nav.sidebar');
     await nav.getByRole('link', { name: info.project.name === 'phone' ? 'Log' : 'Logbook' }).click();
     await expect(page).toHaveURL(new RegExp(`${PREFIX}/log$`));
     await page.reload();
@@ -106,7 +107,7 @@ test.describe('roles through HA users', () => {
     await page.screenshot({ path: `${SHOTS}/${info.project.name}-helm-pin.png` });
     for (const d of '2222') await page.locator('.pin-pad').getByRole('button', { name: d, exact: true }).click();
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page).toHaveURL(/\/d$/);
+    await expect(page).toHaveURL(/\/d(\/[A-Za-z0-9]+)?$/);
     await page.goto('settings');
     await expect(page.locator('.screen-head')).toContainText('acting as Crew · crew');
     await page.goto('login');
@@ -117,14 +118,15 @@ test.describe('roles through HA users', () => {
 
 test.describe('live values', () => {
   test('stream over the Data Hub socket and go stale within the effective timeout when Signal K is lost', async ({ page, request }, info) => {
-    test.skip(info.project.name !== 'desktop', 'stops the shared fake Signal K; run once');
+    test.skip(info.project.name !== 'desktop', 'stops the shared Signal K simulator; run once');
     await page.goto('settings');
     const row = (path: string) => page.locator('.path-row', { hasText: path });
     const sog = row('navigation.speedOverGround');
     await expect(sog).toHaveAttribute('data-stale', 'false', { timeout: 10_000 });
     await expect(sog).toContainText(/\d+\.\d kn/);
-    await expect(row('propulsion.port.revolutions')).toContainText('2,178 rpm');
-    // Values keep arriving: the wobble in the generated SOG changes within a few seconds.
+    // Sailing in the simulator: engines stopped.
+    await expect(row('propulsion.port.revolutions')).toContainText('0 rpm');
+    // Values keep arriving: the simulated SOG changes within a few seconds.
     const first = await sog.locator('.path-row__value').textContent();
     await expect(sog.locator('.path-row__value')).not.toHaveText(first ?? '', { timeout: 8000 });
     await page.screenshot({ path: `${SHOTS}/${info.project.name}-settings.png`, fullPage: true });

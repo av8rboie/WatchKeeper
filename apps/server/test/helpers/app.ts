@@ -9,11 +9,13 @@ import { ManualClock } from '../../src/clock.js';
 import { loadConfig, SUPERVISOR_INGRESS_PROXY } from '../../src/config.js';
 import { openDb } from '../../src/db/index.js';
 import { FakeHaClient } from '../../src/ha/client.js';
+import type { SignalKClient } from '../../src/signalk/client.js';
 import { LiveStore } from '../../src/signalk/store.js';
 import { TimeSource } from '../../src/signalk/time.js';
 import { T0 } from './fixtures.js';
 
-export async function makeApp(clock = new ManualClock(T0)) {
+/** `signalk` lets a test capture what the backend writes to Signal K. */
+export async function makeApp(clock = new ManualClock(T0), opts: { signalk?: Pick<SignalKClient, 'send'> } = {}) {
   const dataDir = mkdtempSync(join(tmpdir(), 'dh-app-'));
   const db = openDb(':memory:');
   const store = new LiveStore(clock);
@@ -25,7 +27,7 @@ export async function makeApp(clock = new ManualClock(T0)) {
     clock,
     store,
     hub: new EventHub(store, () => clock.now()),
-    signalk: null,
+    signalk: (opts.signalk as SignalKClient | undefined) ?? null,
     time: new TimeSource(store, clock),
     ha,
     catalogPaths: () => expandCatalog().map((d) => d.path),

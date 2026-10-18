@@ -1,9 +1,13 @@
-import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { roleAtLeast } from '@watchkeeper/shared';
-import { useMe, useSystemStatus } from '../api/client';
-import { Card, SegmentedControl, StatusPill, formatAge } from '../shell/components';
+import { roleAtLeast, type DerivedSettings } from '@watchkeeper/shared';
+import { api, ApiError, useMe, useSystemStatus } from '../api/client';
+import { useDerivedSettings } from '../dashboards/api';
+import { useKeepScreenOn } from '../dashboards/hooks';
+import { Button, Card, FormField, SegmentedControl, StatusPill, formatAge } from '../shell/components';
 import { useTheme } from '../theme/theme';
+import { Thresholds } from './Thresholds';
 import { PathBrowser } from './PathBrowser';
 import { RoleMapping } from './RoleMapping';
 import { UnitsForm } from './UnitsForm';
@@ -69,9 +73,64 @@ function SystemCard() {
   );
 }
 
+/** Inputs to derived values that Signal K doesn't provide. Placeholders until the skipper saves them. */
+function DerivedCard({ canEdit }: { canEdit: boolean }) {
+  const qc = useQueryClient();
+  const current = useDerivedSettings().data;
+  const [cap, setCap] = useState('');
+  const [floor, setFloor] = useState('');
+  const [msg, setMsg] = useState<string | null>(null);
+  useEffect(() => {
+    if (!current) return;
+    setCap(String(current.houseCapacityAh));
+    setFloor(String(Math.round(current.floorSoc * 100)));
+  }, [current]);
+  const save = async () => {
+    try {
+      const saved = await api<DerivedSettings>('/settings/derived', {
+        method: 'PUT',
+        body: { houseCapacityAh: Number(cap), floorSoc: Number(floor) / 100, confirmed: true },
+      });
+      qc.setQueryData(['settings', 'derived'], saved);
+      setMsg('Saved.');
+    } catch (e) {
+      setMsg(e instanceof ApiError ? e.message : 'Could not save.');
+    }
+  };
+  return (
+    <Card title="Derived values">
+      <div className="stack">
+        <p className="muted" style={{ margin: 0, fontSize: 14 }}>
+          Time to empty uses the house bank's capacity and the state of charge you count down to.
+          {current && !current.confirmed ? ' These are placeholders until you save them.' : ''}
+        </p>
+        <div className="grid-2">
+          <FormField label="House bank capacity (Ah)">
+            {(id) => <input id={id} className="input" inputMode="numeric" value={cap} disabled={!canEdit} onChange={(e) => setCap(e.target.value)} />}
+          </FormField>
+          <FormField label="Count down to (% charge)">
+            {(id) => <input id={id} className="input" inputMode="numeric" value={floor} disabled={!canEdit} onChange={(e) => setFloor(e.target.value)} />}
+          </FormField>
+        </div>
+        {canEdit ? (
+          <div className="row" style={{ gap: 10 }}>
+            <Button onClick={() => void save()}>Save</Button>
+            {msg ? (
+              <span className="muted" role="status">
+                {msg}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </Card>
+  );
+}
+
 export function SettingsScreen() {
   const me = useMe().data;
   const { theme, setTheme } = useTheme();
+  const { on: keepOn, set: setKeepOn } = useKeepScreenOn();
   const role = me?.role ?? 'guest';
 
   useEffect(() => {
@@ -90,15 +149,32 @@ export function SettingsScreen() {
       </div>
       <SystemCard />
       <Card title="Display on this device">
-        <SegmentedControl
-          label="Theme"
-          value={theme}
-          onChange={setTheme}
-          options={[
-            { value: 'day', label: 'Day' },
-            { value: 'night', label: 'Night' },
-          ]}
-        />
+        <div className="stack">
+          <SegmentedControl
+            label="Theme"
+            value={theme}
+            onChange={setTheme}
+            options={[
+              { value: 'day', label: 'Day' },
+              { value: 'night', label: 'Night' },
+            ]}
+          />
+          <div className="row" style={{ gap: 12 }}>
+            <span>Keep screen on</span>
+            <SegmentedControl<'on' | 'off'>
+              label="Keep screen on"
+              value={keepOn ? 'on' : 'off'}
+              onChange={(v) => setKeepOn(v === 'on')}
+              options={[
+                { value: 'off', label: 'Off' },
+                { value: 'on', label: 'On' },
+              ]}
+            />
+          </div>
+          <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+            Keeps the screen awake on dashboards and anchor watch, where the browser allows it.
+          </p>
+        </div>
       </Card>
       {role === 'guest' || me?.actingAs ? (
         <Card title="Helm sign-in">
@@ -113,6 +189,10 @@ export function SettingsScreen() {
       <Card title="Units">
         {roleAtLeast(role, 'crew') && !me?.actingAs ? <UnitsForm /> : <p className="muted" style={{ margin: 0 }}>Units are saved per Home Assistant user; guests use the defaults.</p>}
       </Card>
+      <Card title="Thresholds and alarms">
+        <Thresholds canEdit={roleAtLeast(role, 'skipper')} />
+      </Card>
+      <DerivedCard canEdit={roleAtLeast(role, 'skipper')} />
       {roleAtLeast(role, 'skipper') ? (
         <Card title="Roles">
           <RoleMapping />

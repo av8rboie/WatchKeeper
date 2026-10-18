@@ -6,6 +6,7 @@ import { systemClock, type Clock } from './clock.js';
 import type { Config } from './config.js';
 import { ConnectionGaps } from './db/gaps.js';
 import { getSetting, openDb } from './db/index.js';
+import { DerivedEngine } from './derived/engine.js';
 import { restoreIfMissing } from './db/snapshot.js';
 import type { HaClient } from './ha/client.js';
 import { Recorder } from './recorder/recorder.js';
@@ -86,7 +87,9 @@ export async function createRuntime(opts: RuntimeOptions) {
   });
 
   const recorder = new Recorder(db, store, clock);
+  const derived = new DerivedEngine(db, store, clock, (values) => signalk.send(values));
   let regTimer: NodeJS.Timeout | null = null;
+  let regAttempts = 0;
 
   // Device registration: request the token until approved (or not needed).
   const registerDevice = async (): Promise<void> => {
@@ -94,7 +97,8 @@ export async function createRuntime(opts: RuntimeOptions) {
     // A connection made before approval gets no data; reconnect with the new token.
     if (accessState === 'approved' && !signalk.usingToken) signalk.reconnect();
     if (accessState === 'pending') app.log.warn('Waiting for Signal K to approve the Data Hub device. Approve it in the Signal K admin UI.');
-    if (accessState === 'pending' || accessState === 'error') regTimer = setTimeout(() => void registerDevice(), 10_000);
+    // Poll quickly while someone is likely at the Signal K admin UI approving it, then back off.
+    if (accessState === 'pending' || accessState === 'error') regTimer = setTimeout(() => void registerDevice(), ++regAttempts <= 30 ? 2_000 : 10_000);
   };
 
   return {
@@ -104,14 +108,19 @@ export async function createRuntime(opts: RuntimeOptions) {
     hub,
     signalk,
     recorder,
+    derived,
     time,
     start() {
       signalk.start();
       void registerDevice();
       recorder.start();
+      derived.start();
+      app.ctx.alarms.start();
     },
     async stop() {
       if (regTimer) clearTimeout(regTimer);
+      app.ctx.alarms.stop();
+      derived.stop();
       recorder.stop();
       recorder.finish(clock.now(), { partial: true });
       signalk.stop();

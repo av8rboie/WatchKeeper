@@ -12,6 +12,9 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
+# The Signal K simulator is a dev dependency of the server: needed for the
+# frozen install, left out of the image by `deploy --prod`.
+COPY apps/sim/package.json apps/sim/
 RUN pnpm install --frozen-lockfile
 COPY packages packages
 COPY apps apps

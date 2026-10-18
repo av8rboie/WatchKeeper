@@ -26,6 +26,16 @@ describe('Signal K connection', () => {
     server = null;
   });
 
+  it('stops cleanly while a connection is still being established', async () => {
+    server = await FakeSignalK.start();
+    const store = new LiveStore(systemClock);
+    const c = new SignalKClient({ url: server.url, store, clock: systemClock, gaps: new ConnectionGaps(openDb(':memory:')) });
+    c.start();
+    // Still CONNECTING: terminating must not raise an unhandled 'error'.
+    expect(() => c.stop()).not.toThrow();
+    await new Promise((r) => setTimeout(r, 50));
+  });
+
   it('records one connection gap across an outage and marks every path stale', async () => {
     server = await FakeSignalK.start();
     const db = openDb(':memory:');

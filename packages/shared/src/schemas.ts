@@ -135,6 +135,16 @@ export const HistorySeriesSchema = z.object({
 });
 export type HistorySeries = z.infer<typeof HistorySeriesSchema>;
 
+/** Inputs to derived values that Signal K doesn't provide. */
+export const DerivedSettingsSchema = z.object({
+  /** House bank capacity. Ships as a placeholder the skipper confirms. */
+  houseCapacityAh: z.number().positive().max(10_000),
+  /** Time to empty counts down to this state of charge (0 to 0.95). */
+  floorSoc: z.number().min(0).max(0.95),
+  confirmed: z.boolean(),
+});
+export type DerivedSettings = z.infer<typeof DerivedSettingsSchema>;
+
 /** Server-to-client change events on /api/v1/events. */
 export const EventTypeSchema = z.enum([
   'alarm.raised',

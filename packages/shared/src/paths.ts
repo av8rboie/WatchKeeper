@@ -90,7 +90,10 @@ export const PATH_TEMPLATES: readonly PathDef[] = [
   { path: 'electrical.batteries.<id>.current', label: '<Id> battery current', siUnit: 'A', quantity: 'current', staleMs: s(30), rateClass: 'medium' },
   { path: 'electrical.batteries.<id>.capacity.stateOfCharge', label: '<Id> battery SoC', siUnit: 'ratio', quantity: 'percent', staleMs: s(60), rateClass: 'slow' },
   { path: 'electrical.solar.<id>.current', label: '<Id> solar current', siUnit: 'A', quantity: 'current', staleMs: s(60), rateClass: 'slow' },
+  { path: 'electrical.alternators.<id>.voltage', label: '<Id> alternator voltage', siUnit: 'V', quantity: 'voltage', staleMs: s(30), rateClass: 'slow' },
   { path: 'tanks.<type>.<id>.currentLevel', label: '<Type> tank <id>', siUnit: 'ratio', quantity: 'percent', staleMs: s(300), rateClass: 'verySlow' },
+  // Static: Signal K publishes it once from the tank sender's configuration.
+  { path: 'tanks.<type>.<id>.capacity', label: '<Type> tank <id> capacity', siUnit: 'm3', quantity: 'volume', staleMs: null, rateClass: 'verySlow' },
   { path: 'steering.autopilot.state', label: 'Autopilot', siUnit: 'string', quantity: 'state', staleMs: s(30), rateClass: 'medium' },
 ];
 
@@ -132,7 +135,8 @@ function fill(def: PathDef, id: string, type?: string): PathDef {
 export function expandCatalog(ids: InstanceIds = DEFAULT_INSTANCE_IDS): PathDef[] {
   const out: PathDef[] = [];
   for (const def of PATH_TEMPLATES) {
-    if (def.path.startsWith('propulsion.<id>')) {
+    // One alternator per engine.
+    if (def.path.startsWith('propulsion.<id>') || def.path.startsWith('electrical.alternators.<id>')) {
       for (const id of ids.propulsion) out.push(fill(def, id));
     } else if (def.path.startsWith('electrical.batteries.<id>')) {
       for (const id of ids.batteries) out.push(fill(def, id));
@@ -190,9 +194,9 @@ export function describePath(path: string, sample?: unknown): PathDef {
   };
 }
 
-/** Numeric paths are written to the history tables. Positions are split into lat/lon. */
+/** Numeric paths are written to the history tables. Positions are split into lat/lon; static tank capacities are not recorded. */
 export function isRecordable(def: PathDef): boolean {
-  return def.quantity !== 'state' && def.quantity !== 'text' && def.path !== 'navigation.anchor.position';
+  return def.quantity !== 'state' && def.quantity !== 'text' && def.path !== 'navigation.anchor.position' && !/^tanks\..+\.capacity$/.test(def.path);
 }
 
 export const POSITION_LAT_SUFFIX = '.latitude';

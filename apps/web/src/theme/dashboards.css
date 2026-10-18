@@ -1,0 +1,691 @@
+/* Dashboards: widgets, the grid, view and edit mode. Tokens only. */
+
+/* Tiles inside the grid fill their cell. Each cell is a size container, so a
+   widget drops extras (heading tape, second sub line) when it is one row tall. */
+.widget-frame {
+  position: relative;
+  height: 100%;
+  container-type: size;
+}
+
+.widget-frame > .tile {
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.widget > .label,
+.widget > .tile__value,
+.widget > .tile__sub {
+  flex-shrink: 0;
+}
+
+@container (max-height: 140px) {
+  .tape,
+  .tile__sub--extra {
+    display: none;
+  }
+}
+
+.widget__label {
+  padding-right: 24px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tile__num--md {
+  font-size: 40px;
+}
+
+.tile__num--words {
+  font-size: 30px;
+  line-height: 44px;
+}
+
+.tile__side {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tile__side--port {
+  color: var(--port);
+}
+
+.tile__side--stbd {
+  color: var(--stbd);
+}
+
+.tile__sub--warn {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.tile--missing .tile__sub {
+  color: var(--stale);
+}
+
+.link-button {
+  min-height: var(--touch);
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tile .link-button {
+  min-height: 28px;
+}
+
+.link-button--danger {
+  color: var(--alarm);
+}
+
+/* Gauge */
+.gauge__svg {
+  width: 100%;
+  max-width: 260px;
+  align-self: center;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.gauge__track {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 12;
+}
+
+.gauge__zone {
+  fill: none;
+  stroke-width: 12;
+}
+
+.gauge__zone--warn {
+  stroke: var(--warn);
+}
+
+.gauge__zone--alarm {
+  stroke: var(--alarm);
+}
+
+.gauge__value {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 12;
+}
+
+.gauge__readout {
+  text-align: center;
+  margin-top: -30px;
+}
+
+/* Wind */
+.wind__body {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+}
+
+.wind__rose {
+  width: 150px;
+  height: 150px;
+  max-height: 100%;
+  flex: 0 0 auto;
+}
+
+.wind__ring {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 2;
+}
+
+.wind__sector {
+  fill: none;
+  stroke-width: 6;
+}
+
+.wind__sector--port {
+  stroke: var(--port);
+}
+
+.wind__sector--stbd {
+  stroke: var(--stbd);
+}
+
+.wind__bow,
+.wind__true {
+  stroke: var(--sub);
+  stroke-width: 2;
+}
+
+.wind__true {
+  stroke-dasharray: 4 4;
+}
+
+.wind__boat {
+  fill: none;
+  stroke: var(--sub);
+  stroke-width: 1.5;
+}
+
+.wind__apparent {
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.wind__apparent-dot {
+  fill: var(--ink);
+}
+
+.wind__readouts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.wind__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--sub);
+}
+
+.wind__grid dt {
+  font-weight: 500;
+}
+
+.wind__grid dd {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.tile--stale .wind__grid dd {
+  color: var(--stale);
+}
+
+.tile--stale .wind__apparent,
+.tile--stale .wind__apparent-dot {
+  stroke: var(--stale);
+  fill: var(--stale);
+}
+
+/* Heading tape */
+.tape {
+  width: 100%;
+  max-width: 220px;
+  height: 26px;
+}
+
+.tape__tick,
+.tape__index {
+  stroke: var(--sub);
+  stroke-width: 1.5;
+  fill: var(--sub);
+}
+
+.tape__label {
+  fill: var(--sub);
+  font-size: 10px;
+  font-family: var(--font-ui);
+}
+
+/* Trend */
+.trend__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--sub);
+}
+
+.trend__key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trend__swatch {
+  width: 16px;
+  border-top: 3px solid;
+}
+
+.trend__swatch--dashed {
+  border-top-style: dashed;
+}
+
+.trend__unit {
+  margin-left: auto;
+}
+
+.trend__plot {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.trend__empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+}
+
+/* Twin */
+.twin__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  flex: 1;
+}
+
+.twin__side {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 4px solid;
+  font-size: 14px;
+  color: var(--sub);
+}
+
+.twin__side--port {
+  border-top-color: var(--port);
+}
+
+.twin__side--stbd {
+  border-top-color: var(--stbd);
+  border-top-style: dashed;
+}
+
+.twin__name {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.twin__side--port .twin__name {
+  color: var(--port);
+}
+
+.twin__side--stbd .twin__name {
+  color: var(--stbd);
+}
+
+.twin__row b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.twin__row .twin__value--warn {
+  color: var(--warn);
+}
+
+.twin__row .twin__value--alarm {
+  color: var(--alarm);
+}
+
+.twin__row .twin__value--stale,
+.twin__row .twin__value--missing {
+  color: var(--stale);
+  font-weight: 500;
+}
+
+/* Tank */
+.tank__body {
+  display: flex;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.tank__bar {
+  width: 28px;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+.tank__fill {
+  background: var(--accent);
+}
+
+.tile--warn .tank__fill {
+  background: var(--warn);
+}
+
+.tile--alarm .tank__fill {
+  background: var(--alarm);
+}
+
+.tile--stale .tank__fill {
+  background: var(--stale);
+}
+
+.tank__readout {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+/* Position */
+.position__coords {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-num);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.link-widget__a {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--accent);
+  min-height: var(--touch);
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Dashboard view */
+.dash-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 4px 10px;
+  flex-wrap: wrap;
+}
+
+.dash-dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.dash-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+}
+
+.dash-dots span.dash-dots__on {
+  width: 18px;
+  background: var(--accent);
+}
+
+.dash-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-button);
+}
+
+.dash-tabs__tab {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--sub);
+  font: inherit;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.dash-tabs__tab[aria-current='page'] {
+  background: var(--ink);
+  color: var(--panel);
+  font-weight: 600;
+}
+
+.dash-tabs__new {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.dash-edit-link {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.dash-grid .react-grid-item.react-grid-placeholder {
+  background: var(--accent);
+  opacity: 0.15;
+  border-radius: var(--radius-tile);
+}
+
+/* Edit mode */
+.edit-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.edit-page__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.edit-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.edit-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--sub);
+}
+
+.edit-canvas {
+  border: 1.5px dashed var(--stale);
+  border-radius: 16px;
+  padding: 16px;
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--line) 1px, transparent 1px);
+  background-size: 16px 16px;
+  min-height: 320px;
+}
+
+.edit-canvas__frame {
+  margin: 0 auto;
+}
+
+.edit-canvas__empty {
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-tile);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.widget-frame--selected > .tile {
+  border: 2px solid var(--accent);
+}
+
+.widget-frame__select {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: 0;
+  background: transparent;
+  border-radius: var(--radius-tile);
+  cursor: pointer;
+}
+
+.widget-frame__select:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.widget-frame__handle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  color: var(--sub);
+  cursor: grab;
+  touch-action: none;
+}
+
+.dash-grid--editing .react-grid-item > .react-resizable-handle {
+  z-index: 3;
+  width: 24px;
+  height: 24px;
+}
+
+.dash-grid--editing .react-grid-item > .react-resizable-handle::after {
+  right: 6px;
+  bottom: 6px;
+  width: 12px;
+  height: 12px;
+  border-right: 3px solid var(--accent);
+  border-bottom: 3px solid var(--accent);
+}
+
+.edit-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-tile);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+@media (min-width: 1024px) {
+  .edit-page {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .edit-panel {
+    width: 360px;
+    flex: 0 0 360px;
+    position: sticky;
+    top: 16px;
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+  }
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.panel-title--sm {
+  font-size: 16px;
+}
+
+.panel-divider {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.path-chip {
+  min-height: var(--touch);
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.path-chip .mono {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.path-chip--picking {
+  border: 1.5px solid var(--accent);
+  background: var(--accent-tint);
+}
+
+.pair-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.pair-row__side {
+  font-weight: 700;
+  font-size: 12px;
+  margin-right: 4px;
+}
+
+.edit-panel .path-list {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+/* Thresholds list in settings */
+.threshold-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.threshold-row__limits {
+  font-size: 14px;
+  color: var(--sub);
+}

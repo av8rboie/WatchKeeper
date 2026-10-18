@@ -1,0 +1,23 @@
+{
+  "name": "@watchkeeper/sim",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Synthetic Signal K server for development and tests. Never shipped in the add-on image.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "tsx src/cli.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@watchkeeper/shared": "workspace:*",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.2",
+    "tsx": "^4.23.15"
+  }
+}

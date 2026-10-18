@@ -6,10 +6,16 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ZodError } from 'zod';
 import { roleAtLeast, type Role, type UnitPrefs } from '@watchkeeper/shared';
+import { AlarmEngine } from './alarms/engine.js';
+import { Thresholds } from './alarms/thresholds.js';
+import { registerAlarmRoutes } from './api/alarms.js';
 import { registerAuthRoutes } from './api/auth.js';
+import { registerDashboardRoutes } from './api/dashboards.js';
 import type { EventHub } from './api/events.js';
+import { registerHistoryRoutes } from './api/history.js';
 import { registerPathRoutes } from './api/paths.js';
 import { registerSystemRoutes } from './api/system.js';
+import { Dashboards } from './dashboards/store.js';
 import { Elevations, Users } from './auth/users.js';
 import type { Clock } from './clock.js';
 import type { Config } from './config.js';
@@ -78,6 +84,9 @@ export interface RouteInfo {
 export interface AppContext extends AppDeps {
   users: Users;
   elevations: Elevations;
+  dashboards: Dashboards;
+  thresholds: Thresholds;
+  alarms: AlarmEngine;
   /** Every API route and its minimum role. The role tests walk this list. */
   routes: RouteInfo[];
 }
@@ -97,7 +106,19 @@ export async function buildApp(deps: AppDeps, opts: { logger?: boolean | object 
   const app = Fastify({ logger: opts.logger ?? false, logController: new LogController({ disableRequestLogging: true }) });
   const users = new Users(deps.db, deps.clock);
   const elevations = new Elevations(deps.db, deps.clock);
-  const ctx: AppContext = { ...deps, users, elevations, routes: [] };
+  const thresholds = new Thresholds(deps.db, deps.clock);
+  const alarms = new AlarmEngine({
+    db: deps.db,
+    store: deps.store,
+    clock: deps.clock,
+    time: deps.time,
+    hub: deps.hub,
+    thresholds,
+    ha: deps.ha,
+    sendToSignalK: deps.signalk ? (values) => deps.signalk!.send(values) : undefined,
+    log: { warn: (msg) => app.log.warn(msg) },
+  });
+  const ctx: AppContext = { ...deps, users, elevations, dashboards: new Dashboards(deps.db, deps.clock), thresholds, alarms, routes: [] };
   app.decorate('ctx', ctx);
   const trusted = new Set(deps.config.trustedProxies.map(normalizeAddress));
 
@@ -180,6 +201,9 @@ export async function buildApp(deps: AppDeps, opts: { logger?: boolean | object 
       registerAuthRoutes(api, ctx);
       registerPathRoutes(api, ctx);
       registerSystemRoutes(api, ctx);
+      registerDashboardRoutes(api, ctx);
+      registerAlarmRoutes(api, ctx);
+      registerHistoryRoutes(api, ctx);
       api.get('/events', { websocket: true, config: { minRole: 'guest' } }, (socket) => deps.hub.add(socket));
     },
     { prefix: API_PREFIX },

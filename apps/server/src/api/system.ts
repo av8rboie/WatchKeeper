@@ -1,8 +1,9 @@
 import type { FastifyInstance } from 'fastify';
-import { SystemStatusSchema, type SystemStatus } from '@watchkeeper/shared';
+import { DerivedSettingsSchema, SystemStatusSchema, type DerivedSettings, type SystemStatus } from '@watchkeeper/shared';
 import type { AppContext } from '../app.js';
 import { iso } from '../clock.js';
-import { getSetting } from '../db/index.js';
+import { getSetting, setSetting } from '../db/index.js';
+import { DEFAULT_DERIVED_SETTINGS } from '../derived/engine.js';
 import { snapshotTime } from '../db/snapshot.js';
 import { DEVICE_TOKEN, readToken } from '../signalk/deviceAuth.js';
 import { cpuTemperature, DEFAULT_CPU_TEMP_ENTITY, diskStatus } from '../system/status.js';
@@ -36,4 +37,12 @@ export async function systemStatus(ctx: AppContext): Promise<SystemStatus> {
 
 export function registerSystemRoutes(api: FastifyInstance, ctx: AppContext): void {
   api.get('/system/status', { config: { minRole: 'guest' } }, async () => systemStatus(ctx));
+
+  // Battery capacity and floor for time to empty: placeholders until the skipper confirms them.
+  const derived = () => DerivedSettingsSchema.parse({ ...DEFAULT_DERIVED_SETTINGS, ...getSetting<Partial<DerivedSettings>>(ctx.db, 'derived', {}) });
+  api.get('/settings/derived', { config: { minRole: 'guest' } }, async () => derived());
+  api.put('/settings/derived', { config: { minRole: 'skipper' } }, async (req) => {
+    setSetting(ctx.db, 'derived', DerivedSettingsSchema.parse(req.body));
+    return derived();
+  });
 }

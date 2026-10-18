@@ -14,7 +14,7 @@ leaves open are in `DECISIONS.md`. Mockups are in `design/mockups/`.
 | Milestone | State |
 | --- | --- |
 | M1 Foundation | Built for HAOS. Automated criteria pass; HAOS VM install and on-boat checks pending. |
-| M2 Dashboards | Not started |
+| M2 Dashboards | Built against the Signal K simulator. Automated criteria pass; on-boat checks pending. |
 | M3 Logbook | Not started |
 | M4 Maintenance | Not started |
 | M5 Anchor watch and checklists | Not started |
@@ -32,8 +32,9 @@ Access Requests, and claim the skipper role on first open.
 ```
 repository.yaml   HA add-on repository manifest
 addon/            config.yaml, Dockerfile, run.sh, snapshot hook, docs, images
-apps/server       Fastify backend: Signal K client, recorder, ingress auth, REST, live WebSocket
+apps/server       Fastify backend: Signal K client, recorder, alarms, derived values, ingress auth, REST, live WebSocket
 apps/web          React app, served by the backend under the ingress path
+apps/sim          Signal K simulator for dev and tests (never in the add-on image)
 packages/shared   Zod schemas, path catalog with rate classes, unit conversion
 design/mockups    Exported mockups (visual source of truth)
 .github/workflows CI: tests, then multi-arch images to GHCR
@@ -48,18 +49,32 @@ pnpm install
 pnpm dev
 ```
 
-This starts Signal K in Docker with sample data, the backend on :8099, Vite
-on :5173, and a dev ingress proxy. Open
+This starts the Signal K simulator on :3100, the backend on :8099, Vite on
+:5173, and a dev ingress proxy. Open
 http://localhost:5180/api/hassio_ingress/dev/. The proxy plays HA's ingress:
 it injects a dev HA user (switch users with a `ha_user=id|Name` cookie).
 
-Signal K 2.33 requires authentication even on a fresh install. Create an
-admin user in its UI at http://localhost:3000, then approve "Data Hub" under
-Security, then Access Requests.
+The simulator is a catamaran that anchors, motors out, sails and anchors
+again every 6 hours, with engines, batteries, solar, tanks and depth. It
+requires a device token like Signal K 2.33 and approves Data Hub's request
+automatically. Options:
+
+```sh
+pnpm dev -- --scenario sailing      # or motoring, anchored, mixed (default)
+pnpm dev -- --speed 10              # simulated seconds per real second
+curl -X POST localhost:3100/sim/control -d '{"overrides":{"environment.depth.belowKeel":1.2}}'
+curl -X POST localhost:3100/sim/control -d '{"overrides":{"environment.water.temperature":"dead"}}'
+curl -X POST localhost:3100/sim/control -d '{"clear":true}'
+```
+
+To use a real Signal K instead, `pnpm dev -- --real-signalk` starts it in
+Docker (create an admin user at http://localhost:3000, then approve "Data
+Hub" under Security, then Access Requests), or set `SIGNALK_URL` to any
+server.
 
 ```sh
 pnpm test         # unit and API tests (Vitest)
-pnpm test:e2e     # Playwright under a random ingress prefix, phone and desktop viewports
+pnpm test:e2e     # Playwright against the simulator, under a random ingress prefix, phone and desktop
 pnpm typecheck
 docker build -f addon/Dockerfile .   # the add-on image
 ```

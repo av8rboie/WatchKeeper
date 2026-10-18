@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import { describePath, effectiveStaleMs, type LiveMessage, type ServerEvent, type SystemStatus } from '@watchkeeper/shared';
 import { wsUrl } from '../api/base';
-import { useAlarms, type ActiveAlarm } from '../shell/alarms';
+import { loadActiveAlarms, useAlarms, type ActiveAlarm } from '../shell/alarms';
 
 export type Connection = 'connecting' | 'open' | 'reconnecting';
 
@@ -152,6 +152,10 @@ export function useLiveValue(path: string): LiveReading {
 /** Route server events into the query cache and the alarm store. */
 export function useEventBridge(enabled: boolean): void {
   const qc = useQueryClient();
+  const open = useLive((s) => s.connection === 'open');
+  useEffect(() => {
+    if (enabled && open) void loadActiveAlarms();
+  }, [enabled, open]);
   useEffect(() => {
     if (!enabled) return;
     socket.start();
