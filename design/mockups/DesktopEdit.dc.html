@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dashboard edit mode, desktop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&amp;family=Barlow+Semi+Condensed:wght@500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+</style>
+</helmet>
+<div style="min-height: 900px; box-sizing: border-box; background: #EEF2F3; color: #0E1A22; font-family: 'Barlow', sans-serif; display: flex; flex-wrap: wrap; align-items: stretch">
+
+<nav aria-label="Main" style="flex: 1 1 220px; max-width: 240px; min-width: 200px; background: #0E1A22; color: #DCE4E8; display: flex; flex-direction: column; padding: 20px 12px; gap: 4px; box-sizing: border-box">
+<div style="font-size: 18px; font-weight: 700; color: #FFFFFF; padding: 0 10px 18px">Data Hub</div>
+<a href="DesktopEdit.dc.html" aria-current="page" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 10px; background: #1E3240; color: #FFFFFF; font-weight: 600; font-size: 15px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"></rect><rect x="13" y="3" width="8" height="8" rx="2"></rect><rect x="3" y="13" width="8" height="8" rx="2"></rect><rect x="13" y="13" width="8" height="8" rx="2"></rect></svg>Dashboards</a>
+<a href="Logbook.dc.html" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 10px; font-size: 15px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z"></path><path d="M9 8h6"></path><path d="M9 12h6"></path></svg>Logbook</a>
+<a href="DesktopEquipment.dc.html" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 10px; font-size: 15px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"></path></svg>Maintenance</a>
+<a href="AnchorWatch.dc.html" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 10px; font-size: 15px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 6v14"></path><path d="M8 9h8"></path><path d="M5 14a7 7 0 0 0 14 0"></path><circle cx="12" cy="4.5" r="1.5"></circle></svg>Anchor watch</a>
+<a href="DesktopEdit.dc.html" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 10px; font-size: 15px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11"></path><path d="M9 12h11"></path><path d="M9 18h11"></path><path d="M4 6l1 1 2-2"></path><path d="M4 12l1 1 2-2"></path><path d="M4 18l1 1 2-2"></path></svg>Checklists</a>
+<a href="DesktopEdit.dc.html" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 10px; font-size: 15px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"></path></svg>Settings</a>
+<div style="flex: 1"></div>
+<div style="padding: 12px 10px 0; border-top: 1px solid #2A3E4C; font-size: 13px; display: flex; flex-direction: column; gap: 6px; color: #B9C6CD">
+<span style="display: flex; align-items: center; gap: 8px"><span style="width: 8px; height: 8px; border-radius: 4px; background: #4CC08E"></span>Signal K connected</span>
+<span style="display: flex; align-items: center; gap: 8px"><span style="width: 8px; height: 8px; border-radius: 4px; background: #4CC08E"></span>GPS 3D fix · clock synced</span>
+<span>Motoring · 14:12 UTC</span>
+</div>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; padding: 20px 24px; gap: 14px; box-sizing: border-box">
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-wrap: wrap; gap: 4px; background: #FFFFFF; border: 1px solid #D3DBDE; border-radius: 12px; padding: 4px">
+<button style="min-height: 40px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; font-family: inherit; font-size: 15px; color: #4F5F69">Helm</button>
+<button aria-pressed="true" style="min-height: 40px; padding: 0 14px; border: 0; border-radius: 9px; background: #0E1A22; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 600">Engines</button>
+<button style="min-height: 40px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; font-family: inherit; font-size: 15px; color: #4F5F69">Energy</button>
+<button style="min-height: 40px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; font-family: inherit; font-size: 15px; color: #4F5F69">Passage</button>
+<button style="min-height: 40px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; font-family: inherit; font-size: 15px; color: #4F5F69">Anchor</button>
+<button style="min-height: 40px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; font-family: inherit; font-size: 15px; color: #0D5A85; font-weight: 600">+ New</button>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+<div style="display: flex; border: 1px solid #D3DBDE; border-radius: 10px; overflow: hidden; background: #FFFFFF" aria-label="Layout being edited">
+<button style="min-height: 40px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; color: #4F5F69">Phone</button>
+<button style="min-height: 40px; padding: 0 12px; border: 0; border-left: 1px solid #D3DBDE; background: transparent; font-family: inherit; font-size: 14px; color: #4F5F69">Tablet</button>
+<button aria-pressed="true" style="min-height: 40px; padding: 0 12px; border: 0; border-left: 1px solid #D3DBDE; background: #E1EBF1; font-family: inherit; font-size: 14px; font-weight: 600; color: #0B4A6E">Desktop</button>
+</div>
+<button style="min-height: 40px; padding: 0 14px; border: 1px solid #0D5A85; border-radius: 10px; background: #FFFFFF; color: #0D5A85; font-family: inherit; font-size: 15px; font-weight: 600">Add widget</button>
+<button style="min-height: 40px; padding: 0 18px; border: 0; border-radius: 10px; background: #0D5A85; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 600">Done editing</button>
+</div>
+</div>
+
+<div style="font-size: 13px; color: #4F5F69">Editing the desktop layout of Engines. Drag by the handle, resize from the corner. Phone and tablet layouts are untouched.</div>
+
+<div style="flex: 1; border: 1.5px dashed #AEBAC0; border-radius: 16px; padding: 16px; background-color: #F6F8F9; background-image: radial-gradient(#C9D2D6 1px, transparent 1px); background-size: 16px 16px; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 16px">
+
+<div style="flex: 1 1 260px; min-height: 220px; background: #FFFFFF; border: 2px solid #0D5A85; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 6px; box-sizing: border-box">
+<div style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4F5F69">Port engine RPM</span><svg width="18" height="18" viewBox="0 0 24 24" fill="#4F5F69" aria-hidden="true"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg></div>
+<svg viewBox="0 0 200 112" style="width: 100%; max-width: 260px; align-self: center" role="img" aria-label="Gauge at 2,180 rpm of 3,600">
+<path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="#E3E9EC" stroke-width="12"></path>
+<path d="M169.3 60 A80 80 0 0 1 178.8 86.1" fill="none" stroke="#D9963A" stroke-width="12"></path>
+<path d="M178.8 86.1 A80 80 0 0 1 180 100" fill="none" stroke="#B42318" stroke-width="12"></path>
+<path d="M20 100 A80 80 0 0 1 126 24.4" fill="none" stroke="#0D5A85" stroke-width="12"></path>
+</svg>
+<div style="text-align: center; margin-top: -34px"><span style="font-family: 'Barlow Semi Condensed', sans-serif; font-size: 40px; font-weight: 600">2,180</span> <span style="font-size: 14px; color: #4F5F69">rpm</span></div>
+<div style="align-self: flex-end; width: 14px; height: 14px; border-right: 3px solid #0D5A85; border-bottom: 3px solid #0D5A85" aria-hidden="true"></div>
+</div>
+
+<div style="flex: 1 1 260px; min-height: 220px; background: #FFFFFF; border: 1px solid #D3DBDE; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px; box-sizing: border-box">
+<div style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4F5F69">Engines, twin</span><svg width="18" height="18" viewBox="0 0 24 24" fill="#9AA6AD" aria-hidden="true"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; flex: 1">
+<div style="display: flex; flex-direction: column; gap: 4px; border-top: 4px solid #C0362C; padding-top: 8px"><span style="font-size: 13px; font-weight: 700; color: #C0362C">PORT</span><span style="font-size: 14px; color: #4F5F69">Coolant <b style="color: #0E1A22">180°F</b></span><span style="font-size: 14px; color: #4F5F69">Oil <b style="color: #0E1A22">45 psi</b></span><span style="font-size: 14px; color: #4F5F69">Alt <b style="color: #0E1A22">14.1 V</b></span></div>
+<div style="display: flex; flex-direction: column; gap: 4px; border-top: 4px solid #1F7A5A; padding-top: 8px"><span style="font-size: 13px; font-weight: 700; color: #1F7A5A">STBD</span><span style="font-size: 14px; color: #4F5F69">Coolant <b style="color: #0E1A22">178°F</b></span><span style="font-size: 14px; color: #4F5F69">Oil <b style="color: #0E1A22">47 psi</b></span><span style="font-size: 14px; color: #4F5F69">Alt <b style="color: #0E1A22">14.0 V</b></span></div>
+</div>
+</div>
+
+<div style="flex: 1 1 200px; min-height: 220px; background: #FFFFFF; border: 1px solid #D3DBDE; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 6px; box-sizing: border-box">
+<div style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4F5F69">Fuel rate, total</span><svg width="18" height="18" viewBox="0 0 24 24" fill="#9AA6AD" aria-hidden="true"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg></div>
+<div><span style="font-family: 'Barlow Semi Condensed', sans-serif; font-size: 48px; font-weight: 600">1.9</span> <span style="font-size: 15px; color: #4F5F69">gal/h</span></div>
+<div style="font-size: 14px; color: #4F5F69">Range at this burn: 410 nm</div>
+<div style="font-size: 12px; color: #0B4A6E; background: #E1EBF1; border-radius: 6px; padding: 2px 8px; align-self: flex-start; font-weight: 600">Derived value</div>
+</div>
+
+<div style="flex: 2 1 520px; min-height: 220px; background: #FFFFFF; border: 1px solid #D3DBDE; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box">
+<div style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4F5F69">Coolant temp, last 6 h</span><span style="display: flex; gap: 14px; align-items: center; font-size: 13px; color: #4F5F69"><span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 3px; background: #C0362C"></span>Port</span><span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 3px; background: #1F7A5A; border-top: 1px dashed #1F7A5A"></span>Stbd</span></span></div>
+<svg viewBox="0 0 600 150" preserveAspectRatio="none" style="width: 100%; height: 150px" role="img" aria-label="Coolant temperature for both engines, steady near 180 degrees after warm-up">
+<line x1="0" y1="30" x2="600" y2="30" stroke="#EEF2F3" stroke-width="1"></line>
+<line x1="0" y1="75" x2="600" y2="75" stroke="#EEF2F3" stroke-width="1"></line>
+<line x1="0" y1="120" x2="600" y2="120" stroke="#EEF2F3" stroke-width="1"></line>
+<polyline points="0,140 40,120 80,80 120,52 160,46 200,44 240,45 280,43 320,44 360,46 400,44 440,43 480,45 520,44 560,43 600,44" fill="none" stroke="#C0362C" stroke-width="2.5" vector-effect="non-scaling-stroke"></polyline>
+<polyline points="0,142 40,124 80,86 120,58 160,50 200,49 240,48 280,47 320,48 360,49 400,47 440,48 480,49 520,47 560,48 600,48" fill="none" stroke="#1F7A5A" stroke-width="2.5" stroke-dasharray="6 4" vector-effect="non-scaling-stroke"></polyline>
+</svg>
+<div style="display: flex; justify-content: space-between; font-size: 12px; color: #4F5F69"><span>08:12</span><span>10:12</span><span>12:12</span><span>14:12</span></div>
+</div>
+
+<div style="flex: 1 1 200px; min-height: 220px; border: 2px dashed #0D5A85; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #0D5A85; box-sizing: border-box">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+<span style="font-size: 15px; font-weight: 600">Drop a widget here</span>
+</div>
+
+</div>
+</main>
+
+<aside aria-label="Widget settings and path browser" style="flex: 1 1 320px; max-width: 380px; min-width: 280px; background: #FFFFFF; border-left: 1px solid #D3DBDE; padding: 20px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box">
+<div style="display: flex; justify-content: space-between; align-items: center"><h2 style="margin: 0; font-size: 18px; font-weight: 700">Widget settings</h2><button style="min-height: 36px; padding: 0 10px; border: 0; background: transparent; color: #B42318; font-family: inherit; font-size: 14px; font-weight: 600">Remove</button></div>
+
+<div style="display: flex; flex-direction: column; gap: 4px">
+<label for="w-type" style="font-size: 13px; font-weight: 600; color: #4F5F69">Type</label>
+<select id="w-type" style="min-height: 44px; border: 1px solid #D3DBDE; border-radius: 10px; padding: 0 10px; font-family: inherit; font-size: 15px; background: #FFFFFF; color: #0E1A22"><option>Analog gauge</option><option>Numeric</option><option>Trend chart</option></select>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<label for="w-label" style="font-size: 13px; font-weight: 600; color: #4F5F69">Label</label>
+<input id="w-label" value="Port engine RPM" style="min-height: 44px; border: 1px solid #D3DBDE; border-radius: 10px; padding: 0 10px; font-family: inherit; font-size: 15px; color: #0E1A22">
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 13px; font-weight: 600; color: #4F5F69">Signal K path</span>
+<div style="min-height: 44px; border: 1.5px solid #0D5A85; border-radius: 10px; padding: 0 10px; display: flex; align-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 13px; background: #F3F7FA">propulsion.port.revolutions</div>
+<span style="font-size: 12px; color: #4F5F69">Source value 36.3 Hz, shown as rpm</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<div style="display: flex; flex-direction: column; gap: 4px"><label for="w-warn" style="font-size: 13px; font-weight: 600; color: #4F5F69">Warn above</label><input id="w-warn" value="3,000 rpm" style="min-height: 44px; border: 1px solid #D3DBDE; border-radius: 10px; padding: 0 10px; font-family: inherit; font-size: 15px; color: #0E1A22; min-width: 0"></div>
+<div style="display: flex; flex-direction: column; gap: 4px"><label for="w-alarm" style="font-size: 13px; font-weight: 600; color: #4F5F69">Alarm above</label><input id="w-alarm" value="3,400 rpm" style="min-height: 44px; border: 1px solid #D3DBDE; border-radius: 10px; padding: 0 10px; font-family: inherit; font-size: 15px; color: #0E1A22; min-width: 0"></div>
+</div>
+
+<div style="border-top: 1px solid #D3DBDE; padding-top: 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0">
+<h2 style="margin: 0; font-size: 16px; font-weight: 700">Path browser</h2>
+<label for="pb-search" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search paths</label>
+<input id="pb-search" value="propulsion" style="min-height: 44px; border: 1px solid #D3DBDE; border-radius: 10px; padding: 0 10px; font-family: inherit; font-size: 15px; color: #0E1A22">
+<div style="display: flex; flex-direction: column; border: 1px solid #D3DBDE; border-radius: 10px; overflow: hidden">
+<button style="display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 44px; padding: 0 10px; border: 0; background: #E1EBF1; text-align: left; font-family: inherit; color: #0E1A22"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px">propulsion.port.revolutions</span><span style="font-size: 13px; font-weight: 600">2,180 rpm</span></button>
+<button style="display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 44px; padding: 0 10px; border: 0; border-top: 1px solid #D3DBDE; background: #FFFFFF; text-align: left; font-family: inherit; color: #0E1A22"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px">propulsion.port.temperature</span><span style="font-size: 13px; font-weight: 600">180°F</span></button>
+<button style="display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 44px; padding: 0 10px; border: 0; border-top: 1px solid #D3DBDE; background: #FFFFFF; text-align: left; font-family: inherit; color: #0E1A22"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px">propulsion.port.oilPressure</span><span style="font-size: 13px; font-weight: 600">45 psi</span></button>
+<button style="display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 44px; padding: 0 10px; border: 0; border-top: 1px solid #D3DBDE; background: #FFFFFF; text-align: left; font-family: inherit; color: #0E1A22"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px">propulsion.port.runTime</span><span style="font-size: 13px; font-weight: 600">1,248.6 h</span></button>
+<button style="display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 44px; padding: 0 10px; border: 0; border-top: 1px solid #D3DBDE; background: #FFFFFF; text-align: left; font-family: inherit; color: #0E1A22"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px">propulsion.starboard.revolutions</span><span style="font-size: 13px; font-weight: 600">2,150 rpm</span></button>
+<button style="display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 44px; padding: 0 10px; border: 0; border-top: 1px solid #D3DBDE; background: #F6F8F9; text-align: left; font-family: inherit; color: #6F7B82"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px">propulsion.starboard.fuel.rate</span><span style="font-size: 13px; font-weight: 600">stale 5 min</span></button>
+</div>
+</div>
+</aside>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

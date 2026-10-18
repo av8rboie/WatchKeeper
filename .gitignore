@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+*.log
+.env
+.env.local
+# local runtime data
+.data/
+# playwright
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/test/screenshots/

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Anchor watch, dragging alarm</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&amp;family=Barlow+Semi+Condensed:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #000000; color: #E0392D; font-family: 'Barlow', sans-serif; display: flex; flex-direction: column">
+
+<div role="alert" style="background: #FF4A3D; color: #000000; padding: 16px 16px 14px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; justify-content: space-between; align-items: baseline">
+<span style="font-size: 30px; font-weight: 700; letter-spacing: 0.02em">ANCHOR DRAG</span>
+<span style="font-size: 14px; font-weight: 600">03:23 local</span>
+</div>
+<div style="font-size: 16px; font-weight: 600; line-height: 1.35">52 m from anchor, limit 45 m. Moving 0.4 kn toward 138°.</div>
+<div style="display: flex; gap: 8px">
+<button style="flex: 1; height: 56px; border: 0; border-radius: 14px; background: #000000; color: #FF4A3D; font-family: inherit; font-size: 18px; font-weight: 700">Acknowledge</button>
+<button style="width: 120px; height: 56px; border: 2px solid #000000; border-radius: 14px; background: transparent; color: #000000; font-family: inherit; font-size: 16px; font-weight: 700">Snooze 2 min</button>
+</div>
+</div>
+
+<div style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; font-size: 13px; font-weight: 600; color: #A8322A; border-bottom: 1px solid #33100D">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5L6 9H3v6h3l5 4z"></path><path d="M16 9a4 4 0 0 1 0 6"></path><path d="M19 6a8 8 0 0 1 0 12"></path></svg>
+Sounding on Pi buzzer and MFD · logged 03:20
+</div>
+
+<div style="display: flex; justify-content: center; padding: 8px 0 0">
+<svg width="340" height="300" viewBox="0 0 340 300" role="img" aria-label="Swing circle: boat has moved outside the 45 metre radius to the southeast of the anchor">
+<circle cx="170" cy="150" r="110" fill="none" stroke="#A8322A" stroke-width="2" stroke-dasharray="6 6"></circle>
+<circle cx="170" cy="150" r="55" fill="none" stroke="#33100D" stroke-width="1"></circle>
+<line x1="170" y1="20" x2="170" y2="34" stroke="#A8322A" stroke-width="2"></line>
+<text x="170" y="14" text-anchor="middle" font-size="12" font-weight="600" fill="#A8322A" font-family="Barlow, sans-serif">N</text>
+<path d="M170 140v22 M163 145h14 M161 156a9 9 0 0 0 18 0" fill="none" stroke="#E0392D" stroke-width="2.2" stroke-linecap="round"></path>
+<circle cx="170" cy="137" r="3" fill="none" stroke="#E0392D" stroke-width="2"></circle>
+<circle cx="150" cy="172" r="2.5" fill="#5C1A15"></circle>
+<circle cx="168" cy="186" r="2.5" fill="#5C1A15"></circle>
+<circle cx="186" cy="198" r="2.5" fill="#7A221B"></circle>
+<circle cx="204" cy="208" r="2.5" fill="#7A221B"></circle>
+<circle cx="222" cy="219" r="2.5" fill="#A8322A"></circle>
+<circle cx="238" cy="230" r="2.5" fill="#A8322A"></circle>
+<line x1="170" y1="150" x2="255" y2="244" stroke="#E0392D" stroke-width="1.5" stroke-dasharray="3 4"></line>
+<g transform="translate(255 244) rotate(138)">
+<rect x="-9" y="-13" width="5" height="26" rx="2.5" fill="none" stroke="#FF4A3D" stroke-width="2"></rect>
+<rect x="4" y="-13" width="5" height="26" rx="2.5" fill="none" stroke="#FF4A3D" stroke-width="2"></rect>
+<line x1="-4" y1="-4" x2="4" y2="-4" stroke="#FF4A3D" stroke-width="2"></line>
+<line x1="-4" y1="4" x2="4" y2="4" stroke="#FF4A3D" stroke-width="2"></line>
+</g>
+<line x1="20" y1="286" x2="44" y2="286" stroke="#A8322A" stroke-width="2"></line>
+<text x="50" y="290" font-size="12" fill="#A8322A" font-family="Barlow, sans-serif">10 m</text>
+<text x="320" y="290" text-anchor="end" font-size="12" fill="#A8322A" font-family="Barlow, sans-serif">Radius 45 m</text>
+</svg>
+</div>
+
+<div style="margin: 6px 12px 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<div style="border: 1px solid #33100D; border-radius: 14px; padding: 10px 12px"><div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #A8322A">From anchor</div><div style="font-family: 'Barlow Semi Condensed', sans-serif; font-size: 34px; font-weight: 600; line-height: 1.1">52 m</div></div>
+<div style="border: 1px solid #33100D; border-radius: 14px; padding: 10px 12px"><div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #A8322A">Wind</div><div style="font-family: 'Barlow Semi Condensed', sans-serif; font-size: 34px; font-weight: 600; line-height: 1.1">24 kn</div><div style="font-size: 13px; color: #A8322A">Gusts 31 · from 318°</div></div>
+<div style="border: 1px solid #33100D; border-radius: 14px; padding: 10px 12px"><div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #A8322A">Depth</div><div style="font-family: 'Barlow Semi Condensed', sans-serif; font-size: 34px; font-weight: 600; line-height: 1.1">18 ft</div><div style="font-size: 13px; color: #A8322A">Set in 14 ft</div></div>
+<div style="border: 1px solid #33100D; border-radius: 14px; padding: 10px 12px"><div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #A8322A">Rode out</div><div style="font-family: 'Barlow Semi Condensed', sans-serif; font-size: 34px; font-weight: 600; line-height: 1.1">40 m</div><div style="font-size: 13px; color: #A8322A">Set 21:40</div></div>
+</div>
+
+<div style="flex: 1"></div>
+
+<div style="display: flex; gap: 8px; padding: 12px">
+<button style="flex: 1; height: 52px; border: 1px solid #A8322A; border-radius: 14px; background: #000000; color: #E0392D; font-family: inherit; font-size: 16px; font-weight: 600">Adjust radius</button>
+<button style="flex: 1; height: 52px; border: 1px solid #A8322A; border-radius: 14px; background: #000000; color: #E0392D; font-family: inherit; font-size: 16px; font-weight: 600">Anchor up</button>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+/* Design tokens from the build spec's Design system section, lifted from the
+   mockups. Components use these variables only, never raw hex values.
+   The --nav-* extras come from the desktop sidebar in the mockups; see
+   DECISIONS.md. */
+
+:root,
+:root[data-theme='day'] {
+  --bg: #eef2f3;
+  --panel: #ffffff;
+  --line: #d3dbde;
+  --ink: #0e1a22;
+  --sub: #4f5f69;
+  --accent: #0d5a85;
+  --accent-tint: #e1ebf1;
+  --accent-ink: #0b4a6e;
+  --good: #1f7a5a;
+  --warn: #9a5300;
+  --warn-tint: #fbf0df;
+  --alarm: #b42318;
+  --alarm-tint: #fbe9e7;
+  --alarm-banner-bg: #b42318;
+  --alarm-banner-ink: #ffffff;
+  --stale: #6f7b82;
+  --port: #c0362c;
+  --stbd: #1f7a5a;
+  --nav-bg: #0e1a22;
+  --nav-active: #1e3240;
+  --nav-title: #ffffff;
+  --nav-ink: #dce4e8;
+  --nav-sub: #b9c6cd;
+  --nav-line: #2a3e4c;
+  --nav-good: #4cc08e;
+  --on-accent: #ffffff;
+  color-scheme: light;
+}
+
+:root[data-theme='night'] {
+  --bg: #000000;
+  --panel: #0b0302;
+  --line: #33100d;
+  --ink: #e0392d;
+  --sub: #a8322a;
+  --accent: #e0392d;
+  --accent-tint: #1a0605;
+  --accent-ink: #e0392d;
+  --good: #a8322a;
+  --warn: #ff5a4e;
+  --warn-tint: #1a0605;
+  --alarm: #ff4a3d;
+  --alarm-tint: #1a0605;
+  --alarm-banner-bg: #ff4a3d;
+  --alarm-banner-ink: #000000;
+  --stale: #5c1a15;
+  --port: #a8322a;
+  --stbd: #e0392d;
+  --nav-bg: #000000;
+  --nav-active: #1a0605;
+  --nav-title: #e0392d;
+  --nav-ink: #e0392d;
+  --nav-sub: #a8322a;
+  --nav-line: #33100d;
+  --nav-good: #a8322a;
+  --on-accent: #000000;
+  color-scheme: dark;
+}
+
+:root {
+  --radius-tile: 14px;
+  --radius-control: 10px;
+  --radius-button: 12px;
+  --radius-pill: 999px;
+  --touch: 44px;
+  --touch-primary: 56px;
+  --gap: 8px;
+  --pad: 12px;
+  --font-ui: 'Barlow', system-ui, sans-serif;
+  --font-num: 'Barlow Semi Condensed', 'Barlow', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --gap: 16px;
+    --pad: 24px;
+  }
+}

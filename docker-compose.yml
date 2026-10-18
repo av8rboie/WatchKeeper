@@ -1,0 +1,8 @@
+# Local Signal K with its bundled sample data, for development only.
+services:
+  signalk:
+    image: signalk/signalk-server:latest
+    command: ['--sample-n2k-data']
+    ports:
+      - '3000:3000'
+    restart: unless-stopped

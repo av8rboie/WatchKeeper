@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Equipment detail, port engine</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&amp;family=Barlow+Semi+Condensed:wght@500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0D5A85;text-decoration:none}a:hover{color:#0B4A6E;text-decoration:underline}
+</style>
+</helmet>
+<div style="min-height: 900px; box-sizing: border-box; background: #EEF2F3; color: #0E1A22; font-family: 'Barlow', sans-serif; display: flex; flex-wrap: wrap; align-items: stretch">
+
+<nav aria-label="Main" style="flex: 1 1 220px; max-width: 240px; min-width: 200px; background: #0E1A22; color: #DCE4E8; display: flex; flex-direction: column; padding: 20px 12px; gap: 4px; box-sizing: border-box">
+<div style="font-size: 18px; font-weight: 700; color: #FFFFFF; padding: 0 10px 18px">Data Hub</div>
+<a href="DesktopEdit.dc.html" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 10px; font-size: 15px; color: #DCE4E8">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"></rect><rect x="13" y="3" width="8" height="8" rx="2"></rect><rect x="3" y="13" width="8" height="8" rx="2"></rect><rect x="13" y="13" width="8" height="8" rx="2"></rect></svg>Dashboards</a>
+<a href="Logbook.dc.html" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 10px; font-size: 15px; color: #DCE4E8">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z"></path><path d="M9 8h6"></path><path d="M9 12h6"></path></svg>Logbook</a>
+<a href="DesktopEquipment.dc.html" aria-current="page" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 10px; background: #1E3240; color: #FFFFFF; font-weight: 600; font-size: 15px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"></path></svg>Maintenance</a>
+<a href="AnchorWatch.dc.html" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 10px; font-size: 15px; color: #DCE4E8">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 6v14"></path><path d="M8 9h8"></path><path d="M5 14a7 7 0 0 0 14 0"></path><circle cx="12" cy="4.5" r="1.5"></circle></svg>Anchor watch</a>
+<a href="DesktopEdit.dc.html" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 10px; font-size: 15px; color: #DCE4E8">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11"></path><path d="M9 12h11"></path><path d="M9 18h11"></path><path d="M4 6l1 1 2-2"></path><path d="M4 12l1 1 2-2"></path><path d="M4 18l1 1 2-2"></path></svg>Checklists</a>
+<a href="DesktopEdit.dc.html" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: 10px; font-size: 15px; color: #DCE4E8">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"></path></svg>Settings</a>
+<div style="flex: 1"></div>
+<div style="padding: 12px 10px 0; border-top: 1px solid #2A3E4C; font-size: 13px; display: flex; flex-direction: column; gap: 6px; color: #B9C6CD">
+<span style="display: flex; align-items: center; gap: 8px"><span style="width: 8px; height: 8px; border-radius: 4px; background: #4CC08E"></span>Signal K connected</span>
+<span>Docked · 14:12 UTC</span>
+</div>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+
+<div style="font-size: 14px; color: #4F5F69"><a href="Maintenance.dc.html">Maintenance</a> / Propulsion / Port engine</div>
+
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h1 style="margin: 0; font-size: 32px; font-weight: 700">Port engine</h1>
+<div style="font-size: 15px; color: #4F5F69">[Make and model] · S/N [serial] · Port engine room · Installed [date]</div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #D3DBDE; border-radius: 14px; padding: 10px 16px; display: flex; gap: 20px; align-items: center">
+<div><div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4F5F69">Engine hours, live</div><div style="font-family: 'Barlow Semi Condensed', sans-serif; font-size: 32px; font-weight: 600; line-height: 1.1">1,248.6 h</div></div>
+<div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #4F5F69">propulsion.port.runTime</div>
+</div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+
+<div style="flex: 3 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+
+<section style="background: #FFFFFF; border: 1px solid #D3DBDE; border-radius: 14px; padding: 16px">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px"><h2 style="margin: 0; font-size: 18px; font-weight: 700">Scheduled tasks</h2><button style="min-height: 40px; padding: 0 12px; border: 1px solid #0D5A85; border-radius: 10px; background: #FFFFFF; color: #0D5A85; font-family: inherit; font-size: 14px; font-weight: 600">Add task</button></div>
+<div style="overflow-x: auto">
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px">
+<thead><tr style="text-align: left; color: #4F5F69; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase">
+<th style="padding: 8px 8px 8px 0; font-weight: 600">Task</th><th style="padding: 8px; font-weight: 600">Every</th><th style="padding: 8px; font-weight: 600">Last done</th><th style="padding: 8px; font-weight: 600">Next due</th><th style="padding: 8px 0 8px 8px; font-weight: 600">Status</th>
+</tr></thead>
+<tbody>
+<tr style="border-top: 1px solid #E3E9EC; background: #FBF0DF"><td style="padding: 12px 8px 12px 0; font-weight: 600">Oil and filter</td><td style="padding: 12px 8px">250 h</td><td style="padding: 12px 8px">1,000.2 h · 12 Mar</td><td style="padding: 12px 8px">1,250 h</td><td style="padding: 12px 8px; font-weight: 700; color: #7A4200">Due now · 1.4 h</td></tr>
+<tr style="border-top: 1px solid #E3E9EC"><td style="padding: 12px 8px 12px 0; font-weight: 600">Saildrive anode</td><td style="padding: 12px 8px">12 months</td><td style="padding: 12px 8px">2 Nov 2025</td><td style="padding: 12px 8px">2 Nov</td><td style="padding: 12px 8px; font-weight: 600; color: #4F5F69">Due soon · 15 days</td></tr>
+<tr style="border-top: 1px solid #E3E9EC"><td style="padding: 12px 8px 12px 0; font-weight: 600">Raw water impeller</td><td style="padding: 12px 8px">500 h or 24 mo</td><td style="padding: 12px 8px">1,000.2 h · 12 Mar</td><td style="padding: 12px 8px">1,500 h</td><td style="padding: 12px 8px; color: #1F7A5A; font-weight: 600">OK</td></tr>
+<tr style="border-top: 1px solid #E3E9EC"><td style="padding: 12px 8px 12px 0; font-weight: 600">Fuel filters</td><td style="padding: 12px 8px">500 h or 12 mo</td><td style="padding: 12px 8px">1,000.2 h · 12 Mar</td><td style="padding: 12px 8px">1,500 h</td><td style="padding: 12px 8px; color: #1F7A5A; font-weight: 600">OK</td></tr>
+<tr style="border-top: 1px solid #E3E9EC"><td style="padding: 12px 8px 12px 0; font-weight: 600">Belt inspection</td><td style="padding: 12px 8px">100 h</td><td style="padding: 12px 8px">1,201.0 h · 2 Oct</td><td style="padding: 12px 8px">1,301 h</td><td style="padding: 12px 8px; color: #1F7A5A; font-weight: 600">OK</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section style="background: #FFFFFF; border: 1px solid #D3DBDE; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-size: 18px; font-weight: 700">Service history</h2>
+<div style="display: flex; gap: 14px; padding: 10px 0; border-top: 1px solid #E3E9EC"><span style="width: 90px; flex-shrink: 0; font-weight: 600">2 Oct</span><span style="flex: 1">Belt inspected, tension adjusted. <span style="color: #4F5F69">1,201.0 h · Skipper</span></span></div>
+<div style="display: flex; gap: 14px; padding: 10px 0; border-top: 1px solid #E3E9EC"><span style="width: 90px; flex-shrink: 0; font-weight: 600">12 Mar</span><span style="flex: 1">Oil, oil filter, fuel filters, impeller. <span style="color: #4F5F69">1,000.2 h · 4 parts · 2 photos</span></span></div>
+<div style="display: flex; gap: 14px; padding: 10px 0; border-top: 1px solid #E3E9EC"><span style="width: 90px; flex-shrink: 0; font-weight: 600">2 Nov 2025</span><span style="flex: 1">Saildrive anode replaced at haul-out. <span style="color: #4F5F69">Repair · 1 part</span></span></div>
+</section>
+
+</div>
+
+<div style="flex: 2 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+
+<section style="background: #FFFFFF; border: 2px solid #0D5A85; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 18px; font-weight: 700">Complete: oil and filter</h2>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<div style="display: flex; flex-direction: column; gap: 4px"><label for="c-hours" style="font-size: 13px; font-weight: 600; color: #4F5F69">Hours at completion</label><input id="c-hours" value="1,248.6" style="min-height: 44px; border: 1px solid #D3DBDE; border-radius: 10px; padding: 0 10px; font-family: inherit; font-size: 15px; color: #0E1A22; min-width: 0"></div>
+<div style="display: flex; flex-direction: column; gap: 4px"><label for="c-by" style="font-size: 13px; font-weight: 600; color: #4F5F69">Done by</label><select id="c-by" style="min-height: 44px; border: 1px solid #D3DBDE; border-radius: 10px; padding: 0 10px; font-family: inherit; font-size: 15px; background: #FFFFFF; color: #0E1A22; min-width: 0"><option>Skipper</option></select></div>
+</div>
+<div style="font-size: 13px; font-weight: 600; color: #4F5F69">Parts used</div>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15px"><input type="checkbox" checked style="width: 20px; height: 20px">Oil filter [P/N] <span style="margin-left: auto; color: #4F5F69; font-size: 13px">3 aboard, 2 after</span></label>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15px"><input type="checkbox" checked style="width: 20px; height: 20px">Engine oil, 1 gal × 3 <span style="margin-left: auto; color: #9A5300; font-size: 13px; font-weight: 600">4 aboard, 1 after</span></label>
+<div style="display: flex; flex-direction: column; gap: 4px"><label for="c-notes" style="font-size: 13px; font-weight: 600; color: #4F5F69">Notes</label><textarea id="c-notes" style="min-height: 70px; resize: none; border: 1px solid #D3DBDE; border-radius: 10px; padding: 10px; font-family: inherit; font-size: 15px; color: #0E1A22"></textarea></div>
+<div style="display: flex; gap: 8px">
+<button style="min-height: 48px; padding: 0 14px; border: 1px solid #D3DBDE; border-radius: 12px; background: #FFFFFF; font-family: inherit; font-size: 15px; color: #0E1A22">Add photo</button>
+<button style="flex: 1; min-height: 48px; border: 0; border-radius: 12px; background: #0D5A85; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 600">Mark complete</button>
+</div>
+<div style="font-size: 13px; color: #9A5300; font-weight: 600">Engine oil drops below minimum (2). It will be added to the shopping list.</div>
+</section>
+
+<section style="background: #FFFFFF; border: 1px solid #D3DBDE; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+<h2 style="margin: 0; font-size: 18px; font-weight: 700">Manuals and documents</h2>
+<a href="DesktopEquipment.dc.html" style="min-height: 36px; display: flex; align-items: center">Owner's manual (PDF, stored on boat)</a>
+<a href="DesktopEquipment.dc.html" style="min-height: 36px; display: flex; align-items: center">Parts catalog (PDF, stored on boat)</a>
+<span style="font-size: 14px; color: #4F5F69">Warranty: [expiry date]</span>
+</section>
+
+</div>
+</div>
+</main>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

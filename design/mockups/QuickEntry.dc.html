@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Quick log entry</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&amp;family=Barlow+Semi+Condensed:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #EEF2F3; color: #0E1A22; font-family: 'Barlow', sans-serif; display: flex; flex-direction: column">
+
+<div style="display: flex; align-items: center; gap: 8px; padding: 14px 12px 8px">
+<a href="Logbook.dc.html" aria-label="Close" style="width: 44px; height: 44px; border: 1px solid #D3DBDE; border-radius: 12px; background: #FFFFFF; display: flex; align-items: center; justify-content: center">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg>
+</a>
+<div style="flex: 1">
+<h1 style="margin: 0; font-size: 22px; font-weight: 700">Quick entry</h1>
+<div style="font-size: 13px; color: #4F5F69">14:21 UTC · Day 3</div>
+</div>
+</div>
+
+<div style="margin: 4px 12px 12px; padding: 10px 12px; border-radius: 12px; background: #E1EBF1; color: #0B4A6E; font-size: 13px; line-height: 1.45">
+<div style="font-weight: 700; letter-spacing: 0.04em; font-size: 12px; text-transform: uppercase; margin-bottom: 2px">Captured automatically</div>
+32°39.8′N 70°17.6′W · COG 146°T · SOG 7.3 kn · TWS 15 kn · 1012 hPa · Port eng off · Stbd eng off
+</div>
+
+<div style="padding: 0 12px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4F5F69; margin-bottom: 6px">What happened</div>
+<div style="padding: 0 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{events}}" as="ev" hint-placeholder-count="8">
+<button onClick="{{ev.pick}}" aria-pressed="{{ev.pressed}}" style="{{ev.style}}">{{ev.label}}</button>
+</sc-for>
+</div>
+
+<div style="padding: 14px 12px 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4F5F69">Sea state</div>
+<div style="margin: 0 12px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid #D3DBDE; border-radius: 12px; overflow: hidden; background: #FFFFFF">
+<button style="min-height: 44px; border: 0; background: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 500; color: #0E1A22">&lt; 1 m</button>
+<button aria-pressed="true" style="min-height: 44px; border: 0; background: #0E1A22; font-family: inherit; font-size: 14px; font-weight: 600; color: #FFFFFF">1–2 m</button>
+<button style="min-height: 44px; border: 0; border-left: 1px solid #D3DBDE; background: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 500; color: #0E1A22">2–3 m</button>
+<button style="min-height: 44px; border: 0; border-left: 1px solid #D3DBDE; background: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 500; color: #0E1A22">3 m +</button>
+</div>
+
+<div style="padding: 14px 12px 0; display: flex; flex-direction: column; gap: 6px; flex: 1">
+<label for="qe-notes" style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4F5F69">Notes</label>
+<textarea id="qe-notes" style="flex: 1; min-height: 90px; box-sizing: border-box; resize: none; border: 1px solid #D3DBDE; border-radius: 12px; padding: 10px 12px; font-family: inherit; font-size: 16px; color: #0E1A22; background: #FFFFFF">Shook out the reef, wind easing behind the front.</textarea>
+</div>
+
+<div style="display: flex; gap: 8px; padding: 12px 12px 20px">
+<button aria-label="Add photo" style="width: 56px; height: 56px; flex-shrink: 0; border: 1px solid #D3DBDE; border-radius: 14px; background: #FFFFFF; color: #0E1A22; display: flex; align-items: center; justify-content: center; padding: 0">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>
+</button>
+<a href="Logbook.dc.html" style="flex: 1; height: 56px; border-radius: 14px; background: #0D5A85; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 600">Save to log</a>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { picked: 'reefout' };
+}
+renderVals() {
+const list = [
+{ id: 'reefin', label: 'Reef in' },
+{ id: 'reefout', label: 'Reef out' },
+{ id: 'sail', label: 'Sail change' },
+{ id: 'engine', label: 'Engine start/stop' },
+{ id: 'vessel', label: 'Vessel sighted' },
+{ id: 'gear', label: 'Gear issue' },
+{ id: 'weather', label: 'Weather note' },
+{ id: 'other', label: 'Other' }
+];
+const base = 'min-height: 56px; border-radius: 14px; font-family: inherit; font-size: 16px; padding: 0 12px; text-align: left; ';
+return {
+events: list.map((e) => {
+const on = this.state.picked === e.id;
+return {
+label: e.label,
+pressed: on ? 'true' : 'false',
+style: base + (on ? 'border: 2px solid #0D5A85; background: #E1EBF1; color: #0B4A6E; font-weight: 700' : 'border: 1px solid #D3DBDE; background: #FFFFFF; color: #0E1A22; font-weight: 500'),
+pick: () => this.setState({ picked: e.id })
+};
+})
+};
+}
+}
+</script>
+</body>
+</html>

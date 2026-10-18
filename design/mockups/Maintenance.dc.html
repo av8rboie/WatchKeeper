@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Maintenance due list</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&amp;family=Barlow+Semi+Condensed:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #EEF2F3; color: #0E1A22; font-family: 'Barlow', sans-serif; display: flex; flex-direction: column">
+
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px">
+<h1 style="margin: 0; font-size: 24px; font-weight: 700">Maintenance</h1>
+<div style="display: flex; gap: 8px">
+<button aria-label="Search equipment and tasks" style="width: 44px; height: 44px; border: 1px solid #D3DBDE; border-radius: 12px; background: #FFFFFF; color: #0E1A22; display: flex; align-items: center; justify-content: center; padding: 0">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+</button>
+<button aria-label="Log a repair" style="width: 44px; height: 44px; border: 0; border-radius: 12px; background: #0D5A85; color: #FFFFFF; display: flex; align-items: center; justify-content: center; padding: 0">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+</button>
+</div>
+</div>
+
+<div style="margin: 0 12px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+<div style="background: #FBE9E7; border-radius: 12px; padding: 8px 10px; color: #8E1F16"><div style="font-family: 'Barlow Semi Condensed', sans-serif; font-size: 26px; font-weight: 600; line-height: 1.1">1</div><div style="font-size: 12px; font-weight: 600">Overdue</div></div>
+<div style="background: #FBF0DF; border-radius: 12px; padding: 8px 10px; color: #7A4200"><div style="font-family: 'Barlow Semi Condensed', sans-serif; font-size: 26px; font-weight: 600; line-height: 1.1">2</div><div style="font-size: 12px; font-weight: 600">Due now</div></div>
+<div style="background: #FFFFFF; border: 1px solid #D3DBDE; border-radius: 12px; padding: 8px 10px"><div style="font-family: 'Barlow Semi Condensed', sans-serif; font-size: 26px; font-weight: 600; line-height: 1.1">4</div><div style="font-size: 12px; font-weight: 600; color: #4F5F69">Due soon</div></div>
+<div style="background: #FFFFFF; border: 1px solid #D3DBDE; border-radius: 12px; padding: 8px 10px"><div style="font-family: 'Barlow Semi Condensed', sans-serif; font-size: 26px; font-weight: 600; line-height: 1.1">38</div><div style="font-size: 12px; font-weight: 600; color: #4F5F69">OK</div></div>
+</div>
+
+<div style="margin: 10px 12px 0; padding: 10px 12px; background: #FFFFFF; border: 1px solid #D3DBDE; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #4F5F69">
+<span>Engine hours, live</span>
+<span style="display: flex; gap: 14px"><span><span style="font-weight: 700; color: #C0362C">P</span> <span style="font-family: 'Barlow Semi Condensed', sans-serif; font-size: 18px; font-weight: 600; color: #0E1A22">1,248.6 h</span></span><span><span style="font-weight: 700; color: #1F7A5A">S</span> <span style="font-family: 'Barlow Semi Condensed', sans-serif; font-size: 18px; font-weight: 600; color: #0E1A22">1,231.2 h</span></span></span>
+</div>
+
+<a href="DesktopEquipment.dc.html" style="margin: 8px 12px 4px; min-height: 48px; border-radius: 12px; border: 1.5px solid #0D5A85; color: #0D5A85; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600">Pre-departure check: 3 items before Bermuda</a>
+
+<div style="flex: 1; overflow: hidden; padding: 6px 12px 0; display: flex; flex-direction: column; gap: 8px">
+
+<div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8E1F16; padding: 4px 4px 0">Overdue</div>
+<a href="DesktopEquipment.dc.html" style="background: #FFFFFF; border: 1.5px solid #B42318; border-radius: 14px; padding: 12px; display: flex; align-items: center; gap: 10px">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 16px; font-weight: 600">Life raft service</span>
+<span style="font-size: 13px; color: #4F5F69">Safety · Life raft · every 3 years</span>
+<span style="font-size: 13px; font-weight: 700; color: #B42318">36 days overdue · was due 12 Sep</span>
+</div>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4F5F69" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+</a>
+
+<div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #7A4200; padding: 6px 4px 0">Due now</div>
+<a href="DesktopEquipment.dc.html" style="background: #FFFFFF; border: 1.5px solid #9A5300; border-radius: 14px; padding: 12px; display: flex; align-items: center; gap: 10px">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 16px; font-weight: 600">Oil and filter, port engine</span>
+<span style="font-size: 13px; color: #4F5F69">Propulsion · every 250 h · parts aboard</span>
+<span style="font-size: 13px; font-weight: 700; color: #9A5300">1.4 h left · due at 1,250 h</span>
+</div>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4F5F69" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+</a>
+<a href="DesktopEquipment.dc.html" style="background: #FFFFFF; border: 1.5px solid #9A5300; border-radius: 14px; padding: 12px; display: flex; align-items: center; gap: 10px">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 16px; font-weight: 600">EPIRB battery</span>
+<span style="font-size: 13px; color: #4F5F69">Safety · EPIRB · expiry date</span>
+<span style="font-size: 13px; font-weight: 700; color: #9A5300">Expires 31 Oct · 13 days</span>
+</div>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4F5F69" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+</a>
+
+<div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4F5F69; padding: 6px 4px 0">Due soon</div>
+<a href="DesktopEquipment.dc.html" style="background: #FFFFFF; border: 1px solid #D3DBDE; border-radius: 14px; padding: 12px; display: flex; align-items: center; gap: 10px">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 16px; font-weight: 600">Watermaker prefilters</span>
+<span style="font-size: 13px; color: #4F5F69">Plumbing · every 40 h · <span style="font-weight: 700; color: #9A5300">spares low, 1 of 4</span></span>
+<span style="font-size: 13px; color: #4F5F69">18 h left</span>
+</div>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4F5F69" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+</a>
+
+</div>
+
+<nav style="height: 72px; border-top: 1px solid #D3DBDE; background: #FFFFFF; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr))" aria-label="Main">
+<a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 500; color: #4F5F69">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"></rect><rect x="13" y="3" width="8" height="8" rx="2"></rect><rect x="3" y="13" width="8" height="8" rx="2"></rect><rect x="13" y="13" width="8" height="8" rx="2"></rect></svg>Dashboards</a>
+<a href="Logbook.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 500; color: #4F5F69">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z"></path><path d="M9 8h6"></path><path d="M9 12h6"></path></svg>Log</a>
+<a href="Maintenance.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 600; color: #0D5A85">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"></path></svg>Maintenance</a>
+<a href="AnchorWatch.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 500; color: #4F5F69">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="19" cy="12" r="1.5"></circle></svg>More</a>
+</nav>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
