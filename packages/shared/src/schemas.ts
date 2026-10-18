@@ -32,33 +32,48 @@ export const DEFAULT_UNIT_PREFS: UnitPrefs = UnitPrefsSchema.parse({});
 
 const Pin = z.string().regex(/^\d{4,8}$/, 'PIN is 4 to 8 digits');
 
-export const UserPublicSchema = z.object({
+/**
+ * The current user. `id` and `name` come from HA ingress. `actingAs` is set
+ * when a guest device has elevated with a crew member's PIN.
+ */
+export const MeSchema = z.object({
   id: z.string(),
   name: z.string(),
   role: RoleSchema,
+  roleSource: z.enum(['mapped', 'unmapped', 'pin']),
+  actingAs: z.object({ id: z.string(), name: z.string(), until: z.string() }).nullable(),
+  unitPrefs: UnitPrefsSchema,
 });
-export type UserPublic = z.infer<typeof UserPublicSchema>;
-
-export const MeSchema = UserPublicSchema.extend({ unitPrefs: UnitPrefsSchema });
 export type Me = z.infer<typeof MeSchema>;
 
-export const LoginRequestSchema = z.object({ userId: z.string().min(1), pin: Pin });
-export type LoginRequest = z.infer<typeof LoginRequestSchema>;
-
-export const CreateUserSchema = z.object({
-  name: z.string().trim().min(1).max(60),
+/** An HA user as the skipper sees it on the role-mapping screen. */
+export const UserMappingSchema = z.object({
+  id: z.string(),
+  name: z.string(),
   role: RoleSchema,
-  pin: Pin,
+  mapped: z.boolean(),
+  hasPin: z.boolean(),
+  lastSeen: z.string().nullable(),
 });
-export type CreateUser = z.infer<typeof CreateUserSchema>;
+export type UserMapping = z.infer<typeof UserMappingSchema>;
 
-export const UpdateUserSchema = z.object({
-  name: z.string().trim().min(1).max(60).optional(),
-  role: RoleSchema.optional(),
-  pin: Pin.optional(),
+export const PutUsersSchema = z.object({
+  users: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        role: RoleSchema,
+        /** Set or replace the helm PIN; null removes it; omitted leaves it. */
+        pin: Pin.nullable().optional(),
+      }),
+    )
+    .min(1),
 });
 
-export const SetupSkipperSchema = z.object({ name: z.string().trim().min(1).max(60), pin: Pin });
+/** Users whose PIN may elevate a guest device to crew. */
+export const PinUserSchema = z.object({ id: z.string(), name: z.string() });
+
+export const PinElevateSchema = z.object({ userId: z.string().min(1), pin: Pin });
 
 export const ErrorSchema = z.object({ error: z.string(), message: z.string().optional() });
 
@@ -67,9 +82,13 @@ export const PathInfoSchema = z.object({
   label: z.string(),
   siUnit: z.string(),
   quantity: z.string(),
+  rateClass: z.enum(['fast', 'medium', 'slow', 'verySlow']),
+  /** Effective stale timeout in ms; null = never stale. */
   staleMs: z.number().nullable(),
   inCatalog: z.boolean(),
-  /** Current SI value; null when stale or never seen. */
+  /** Whether the backend subscribes to it, so live updates are available. */
+  live: z.boolean(),
+  /** Last SI value received (shown greyed when stale); null when never seen. */
   value: z.unknown().nullable(),
   /** Milliseconds since last update; null when never seen. */
   ageMs: z.number().nullable(),
@@ -83,13 +102,20 @@ export const SystemStatusSchema = z.object({
     url: z.string(),
     since: z.string().nullable(),
     authorized: z.boolean(),
+    accessRequest: z.enum(['approved', 'pending', 'denied', 'not-required', 'error', 'unknown']),
   }),
   gps: z.object({ fix: z.boolean(), ageMs: z.number().nullable() }),
-  clock: z.object({ synced: z.boolean().nullable(), source: z.string().nullable(), offsetMs: z.number().nullable() }),
+  time: z.object({
+    source: z.enum(['gps', 'host']),
+    /** Best current time: GPS when fresh, otherwise the host clock. */
+    now: z.string(),
+    /** GPS minus host clock in ms; null when GPS time is stale. */
+    driftMs: z.number().nullable(),
+  }),
+  cpuTempC: z.number().nullable(),
   disk: z.object({ freeBytes: z.number().nullable(), totalBytes: z.number().nullable() }),
-  lastBackup: z.string().nullable(),
+  lastSnapshot: z.string().nullable(),
   passage: z.object({ active: z.boolean(), name: z.string().nullable() }),
-  serverTime: z.string(),
   version: z.string(),
 });
 export type SystemStatus = z.infer<typeof SystemStatusSchema>;
@@ -109,7 +135,7 @@ export const HistorySeriesSchema = z.object({
 });
 export type HistorySeries = z.infer<typeof HistorySeriesSchema>;
 
-/** Server-to-client events on /api/v1/events. */
+/** Server-to-client change events on /api/v1/events. */
 export const EventTypeSchema = z.enum([
   'alarm.raised',
   'alarm.cleared',
@@ -131,3 +157,20 @@ export interface ServerEvent<T = unknown> {
   type: EventType;
   payload: T;
 }
+
+/** Client to server: replaces this client's live subscription. */
+export const LiveSubscribeSchema = z.object({ type: z.literal('live.subscribe'), paths: z.array(z.string()).max(500) });
+
+/** Server to client: changed values since the last batch, `[SI value, epoch ms]`. */
+export interface LiveMessage {
+  type: 'live';
+  /**
+   * Server time when sent. Browsers age values as (now - ts) plus local time
+   * since receipt, so a phone with a wrong clock still judges staleness right.
+   */
+  now: number;
+  values: Record<string, [unknown, number]>;
+}
+
+/** Most live batches a client receives per second. */
+export const LIVE_MAX_HZ = 4;

@@ -1,12 +1,13 @@
-// Draws the PWA icons (anchor glyph from the mockups on the sidebar navy)
-// without any image dependencies. Run: node scripts/make-icons.mjs
+// Draws the add-on store images (anchor glyph from the mockups on the
+// sidebar navy) without any image dependencies: icon.png 128x128 and
+// logo.png 250x100. Run: node addon/make-images.mjs
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { crc32, deflateSync } from 'node:zlib';
 
-const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'icons');
+const OUT = dirname(fileURLToPath(import.meta.url));
 const BG = [0x0e, 0x1a, 0x22]; // --nav-bg
 const FG = [0xff, 0xff, 0xff]; // --nav-title
 
@@ -19,42 +20,39 @@ const segDist = (px, py, ax, ay, bx, by) => {
 
 /** Distance in icon units (24-unit grid) from a point to the anchor strokes. */
 function anchorDist(x, y) {
-  const d = [
+  return Math.min(
     segDist(x, y, 12, 6, 12, 20),
     segDist(x, y, 8, 9, 16, 9),
     Math.abs(Math.hypot(x - 12, y - 4.5) - 1.5),
     // Lower semicircle of radius 7 centred at (12, 14).
     y >= 14 ? Math.abs(Math.hypot(x - 12, y - 14) - 7) : Math.min(Math.hypot(x - 5, y - 14), Math.hypot(x - 19, y - 14)),
-  ];
-  return Math.min(...d);
+  );
 }
 
-function draw(size, { glyphScale, rounded }) {
-  const raw = Buffer.alloc(size * (size * 4 + 1));
-  const unit = (size * glyphScale) / 24; // pixels per icon unit
-  const off = (size - 24 * unit) / 2;
+/** A width x height image: navy rounded rectangle with the anchor glyph centred. */
+function draw(width, height, { glyphPx, radius }) {
+  const stride = width * 4 + 1;
+  const raw = Buffer.alloc(stride * height);
+  const unit = glyphPx / 24; // pixels per icon unit
+  const offX = (width - glyphPx) / 2;
+  const offY = (height - glyphPx) / 2;
   const half = (1.8 * unit) / 2;
-  const radius = rounded ? size * 0.22 : 0;
-  for (let py = 0; py < size; py++) {
-    raw[py * (size * 4 + 1)] = 0; // filter: none
-    for (let px = 0; px < size; px++) {
+  for (let py = 0; py < height; py++) {
+    raw[py * stride] = 0; // filter: none
+    for (let px = 0; px < width; px++) {
       const cx = px + 0.5;
       const cy = py + 0.5;
-      // Rounded-square mask for the regular icon; full bleed for maskable.
-      let alpha = 1;
-      if (radius > 0) {
-        const qx = Math.max(radius - cx, cx - (size - radius), 0);
-        const qy = Math.max(radius - cy, cy - (size - radius), 0);
-        alpha = Math.max(0, Math.min(1, radius + 0.5 - Math.hypot(qx, qy)));
-      }
-      const dist = anchorDist((cx - off) / unit, (cy - off) / unit) * unit;
+      const qx = Math.max(radius - cx, cx - (width - radius), 0);
+      const qy = Math.max(radius - cy, cy - (height - radius), 0);
+      const alpha = radius > 0 ? Math.max(0, Math.min(1, radius + 0.5 - Math.hypot(qx, qy))) : 1;
+      const dist = anchorDist((cx - offX) / unit, (cy - offY) / unit) * unit;
       const ink = Math.max(0, Math.min(1, half + 0.5 - dist));
-      const i = py * (size * 4 + 1) + 1 + px * 4;
+      const i = py * stride + 1 + px * 4;
       for (let c = 0; c < 3; c++) raw[i + c] = Math.round(BG[c] * (1 - ink) + FG[c] * ink);
       raw[i + 3] = Math.round(alpha * 255);
     }
   }
-  return png(size, size, raw);
+  return png(width, height, raw);
 }
 
 function chunk(type, data) {
@@ -80,10 +78,6 @@ function png(w, h, raw) {
   ]);
 }
 
-mkdirSync(OUT, { recursive: true });
-writeFileSync(join(OUT, 'icon-192.png'), draw(192, { glyphScale: 0.62, rounded: true }));
-writeFileSync(join(OUT, 'icon-512.png'), draw(512, { glyphScale: 0.62, rounded: true }));
-// Maskable: glyph inside the 80% safe zone, background to the edges.
-writeFileSync(join(OUT, 'maskable-512.png'), draw(512, { glyphScale: 0.5, rounded: false }));
-writeFileSync(join(OUT, 'apple-touch-icon.png'), draw(180, { glyphScale: 0.6, rounded: false }));
-console.log(`icons written to ${OUT}`);
+writeFileSync(join(OUT, 'icon.png'), draw(128, 128, { glyphPx: 80, radius: 28 }));
+writeFileSync(join(OUT, 'logo.png'), draw(250, 100, { glyphPx: 72, radius: 18 }));
+console.log(`icon.png and logo.png written to ${OUT}`);

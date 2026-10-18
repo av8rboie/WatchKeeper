@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { ApiError, useMe, useSetupStatus } from './api/client';
-import { useEventSocket } from './api/events';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { useMe, useSetupStatus } from './api/client';
+import { useEventBridge } from './live/socket';
+import { HelmPinScreen } from './screens/HelmPin';
 import { MoreScreen } from './screens/More';
-import { LoginScreen } from './screens/Login';
 import { Placeholder } from './screens/Placeholder';
-import { SettingsScreen } from './settings/Settings';
 import { SetupScreen } from './screens/Setup';
+import { SettingsScreen } from './settings/Settings';
 import { Shell } from './shell/Shell';
 
 const LAST_DASHBOARD = 'dh.lastDashboard';
@@ -19,31 +19,25 @@ function lastDashboard(): string {
   }
 }
 
-/** Sends people to setup on first run and to login without a session. */
-function RequireAuth({ children }: { children: ReactNode }) {
+/** Everyone arrives signed in through HA ingress. First run goes to setup. */
+function Gate({ children }: { children: ReactNode }) {
   const setup = useSetupStatus();
   const me = useMe();
-  const location = useLocation();
-  const offline = me.error instanceof ApiError && me.error.status === 0;
-  useEventSocket(me.isSuccess);
-
+  useEventBridge(me.isSuccess);
   if (setup.data?.needsSetup) return <Navigate to="/setup" replace />;
-  if (me.isPending && !offline) return <div className="login muted">Loading…</div>;
-  if (me.error instanceof ApiError && me.error.status === 401) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
-  }
-  // Backend unreachable: keep the shell up so live Signal K values can still show.
+  if (me.isPending) return <div className="login muted">Loading…</div>;
+  if (me.isError) return <div className="login warn-box">Could not reach Data Hub. Retrying…</div>;
   return <Shell>{children}</Shell>;
 }
 
-const page = (el: ReactNode) => <RequireAuth>{el}</RequireAuth>;
+const page = (el: ReactNode) => <Gate>{el}</Gate>;
 
 export function App() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginScreen />} />
       <Route path="/setup" element={<SetupScreen />} />
       <Route path="/" element={<Navigate to={lastDashboard()} replace />} />
+      <Route path="/login" element={page(<HelmPinScreen />)} />
       <Route path="/d" element={page(<Placeholder title="Dashboards" milestone="M2" what="Custom dashboards: widget grid per breakpoint, edit mode, starter dashboards." />)} />
       <Route path="/d/:dashboardId" element={page(<Placeholder title="Dashboard" milestone="M2" what="Dashboard view mode with live Signal K values." />)} />
       <Route path="/d/:dashboardId/edit" element={page(<Placeholder title="Edit dashboard" milestone="M2" what="Edit mode with widget settings and the path browser." />)} />

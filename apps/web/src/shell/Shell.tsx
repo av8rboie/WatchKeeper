@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { api, ApiError, useSystemStatus } from '../api/client';
+import { api, useSystemStatus } from '../api/client';
+import { useLive, useLiveValue, useNow } from '../live/socket';
 import { useTheme } from '../theme/theme';
 import { topAlarm, useAlarms } from './alarms';
 import { IconButton } from './components';
@@ -16,26 +17,26 @@ import {
   SunIcon,
 } from './icons';
 
-export function useUtcClock(): string {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const t = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(t);
-  }, []);
-  return `${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')} UTC`;
-}
-
+/**
+ * Status strip contents: Data Hub connection, Signal K, GPS fix, time with its
+ * source (GPS or host), passage state.
+ */
 function useStatusSummary() {
   const q = useSystemStatus();
   const s = q.data;
-  const offline = q.error instanceof ApiError && (q.error.status === 0 || q.error.status >= 502);
+  const connection = useLive((st) => st.connection);
+  const position = useLiveValue('navigation.position');
+  const now = useNow(1000);
+  // Best time: the server's (GPS when fresh), advanced by local time since we heard it.
+  const best = s ? new Date(Date.parse(s.time.now) + (now - q.dataUpdatedAt)) : new Date(now);
+  const utc = `${String(best.getUTCHours()).padStart(2, '0')}:${String(best.getUTCMinutes()).padStart(2, '0')} UTC`;
   return {
-    offline,
+    dataHub: connection === 'open',
+    reconnecting: connection === 'reconnecting',
     signalk: s ? s.signalk.connected : null,
-    gps: s ? s.gps.fix : null,
-    clockUnsynced: s?.clock.synced === false,
-    /** null when chrony isn't reporting: say nothing rather than claim a sync. */
-    clockSynced: s?.clock.synced ?? null,
+    gps: !position.stale,
+    utc,
+    timeSource: s ? (s.time.source === 'gps' ? 'GPS' : 'host clock') : null,
     passage: s?.passage.active ? `On passage · ${s.passage.name ?? ''}` : 'Not on passage',
   };
 }
@@ -49,14 +50,17 @@ function NightToggle({ className }: { className?: string }) {
   );
 }
 
-/** Phone and tablet-portrait status strip: Signal K, GPS, UTC, passage, night toggle. */
+/** Phone and tablet-portrait status strip, with the night toggle. */
 function StatusStrip() {
   const s = useStatusSummary();
-  const utc = useUtcClock();
   const navigate = useNavigate();
   return (
     <div className="status-strip">
       <button type="button" className="status-strip__items" onClick={() => navigate('/settings#system')} aria-label="System status. Open settings.">
+        <span className="status-strip__item">
+          <span className={`dot ${s.dataHub ? '' : 'dot--off'}`} />
+          {s.dataHub ? 'Data Hub' : 'Data Hub lost'}
+        </span>
         <span className="status-strip__item">
           <span className={`dot ${s.signalk ? '' : 'dot--off'}`} />
           {s.signalk === false ? 'Signal K lost' : 'Signal K'}
@@ -65,11 +69,11 @@ function StatusStrip() {
           <span className={`dot ${s.gps ? '' : 'dot--off'}`} />
           {s.gps ? 'GPS fix' : 'No GPS fix'}
         </span>
-        <span className="status-strip__item num" style={{ fontWeight: 500 }}>
-          {utc}
+        <span className="status-strip__item">
+          <span className="num" style={{ fontWeight: 500 }}>{s.utc}</span>
+          {s.timeSource ? <span className={s.timeSource === 'GPS' ? '' : 'strip-warning'}>· {s.timeSource}</span> : null}
         </span>
         <span className="status-strip__item">{s.passage}</span>
-        {s.clockUnsynced ? <span className="status-strip__item strip-warning">Clock not synced</span> : null}
       </button>
       <NightToggle />
     </div>
@@ -82,14 +86,14 @@ const NAV = [
   { to: '/maintenance', label: 'Maintenance', icon: MaintenanceIcon, match: ['/maintenance'] },
   { to: '/anchor', label: 'Anchor watch', icon: AnchorIcon, match: ['/anchor'] },
   { to: '/checklists', label: 'Checklists', icon: ChecklistIcon, match: ['/checklists'] },
-  { to: '/settings', label: 'Settings', icon: SettingsIcon, match: ['/settings'] },
+  { to: '/settings', label: 'Settings', icon: SettingsIcon, match: ['/settings', '/login'] },
 ];
 
 const TABS = [
   { to: '/d', label: 'Dashboards', icon: DashboardsIcon, match: ['/d', '/'] },
   { to: '/log', label: 'Log', icon: LogIcon, match: ['/log'] },
   { to: '/maintenance', label: 'Maintenance', icon: MaintenanceIcon, match: ['/maintenance'] },
-  { to: '/more', label: 'More', icon: MoreIcon, match: ['/more', '/anchor', '/checklists', '/passages', '/settings'] },
+  { to: '/more', label: 'More', icon: MoreIcon, match: ['/more', '/anchor', '/checklists', '/passages', '/settings', '/login'] },
 ];
 
 function isActive(pathname: string, match: string[]): boolean {
@@ -99,7 +103,6 @@ function isActive(pathname: string, match: string[]): boolean {
 function Sidebar() {
   const { pathname } = useLocation();
   const s = useStatusSummary();
-  const utc = useUtcClock();
   const navigate = useNavigate();
   return (
     <nav className="sidebar" aria-label="Main">
@@ -113,16 +116,16 @@ function Sidebar() {
       <div className="sidebar__footer">
         <button type="button" className="sidebar__status" onClick={() => navigate('/settings#system')} aria-label="System status. Open settings.">
           <span className="status-strip__item">
-            <span className={`dot ${s.signalk ? '' : 'dot--off'}`} />
-            {s.signalk === false ? 'Signal K lost' : 'Signal K connected'}
+            <span className={`dot ${s.dataHub && s.signalk ? '' : 'dot--off'}`} />
+            {!s.dataHub ? 'Data Hub lost' : s.signalk === false ? 'Signal K lost' : 'Signal K connected'}
           </span>
           <span className="status-strip__item">
-            <span className={`dot ${s.gps && !s.clockUnsynced ? '' : s.gps ? 'dot--warn' : 'dot--off'}`} />
+            <span className={`dot ${s.gps ? '' : 'dot--off'}`} />
             {s.gps ? 'GPS fix' : 'No GPS fix'}
-            {s.clockSynced === null ? '' : s.clockSynced ? ' · clock synced' : ' · clock not synced'}
+            {s.timeSource ? ` · time from ${s.timeSource}` : ''}
           </span>
           <span>
-            {s.passage} · <span className="num" style={{ fontWeight: 500 }}>{utc}</span>
+            {s.passage} · <span className="num" style={{ fontWeight: 500 }}>{s.utc}</span>
           </span>
         </button>
         <NightToggle className="sidebar__night" />
@@ -145,7 +148,7 @@ function TabBar() {
   );
 }
 
-/** Web Audio tone while an alarm is unacknowledged and the page is visible. A convenience: the real alarm is on the Pi. */
+/** Web Audio tone while an alarm is unacknowledged and the page is visible. A convenience: the real alarm is the onboard sounder. */
 function useAlarmTone(active: boolean): void {
   const ctxRef = useRef<AudioContext | null>(null);
   useEffect(() => {
@@ -200,15 +203,15 @@ function AlarmBanner() {
 }
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { offline } = useStatusSummary();
+  const reconnecting = useLive((s) => s.connection === 'reconnecting');
   return (
     <div className="shell">
       <Sidebar />
       <div className="shell__column">
         <AlarmBanner />
-        {offline ? (
+        {reconnecting ? (
           <div className="offline-strip" role="status">
-            Data Hub offline, retrying
+            Reconnecting to Data Hub. Values on screen go stale as their timeouts pass.
           </div>
         ) : null}
         <StatusStrip />

@@ -3,29 +3,33 @@ import { SystemStatusSchema, type SystemStatus } from '@watchkeeper/shared';
 import type { AppContext } from '../app.js';
 import { iso } from '../clock.js';
 import { getSetting } from '../db/index.js';
-import { BROWSER_TOKEN, DEVICE_TOKEN, readToken } from '../signalk/deviceAuth.js';
-import { clockStatus, diskStatus } from '../system/status.js';
+import { snapshotTime } from '../db/snapshot.js';
+import { DEVICE_TOKEN, readToken } from '../signalk/deviceAuth.js';
+import { cpuTemperature, DEFAULT_CPU_TEMP_ENTITY, diskStatus } from '../system/status.js';
 
 export async function systemStatus(ctx: AppContext): Promise<SystemStatus> {
   const now = ctx.clock.now();
   const gps = ctx.store.read('navigation.position', now);
+  const time = ctx.time.read();
   const passage = ctx.db.prepare('SELECT name FROM passage WHERE ended_at IS NULL ORDER BY started_at DESC LIMIT 1').get() as
     | { name: string }
     | undefined;
   const sk = ctx.signalk;
+  const access = ctx.accessState?.() ?? 'unknown';
   return SystemStatusSchema.parse({
     signalk: {
       connected: sk?.connected ?? false,
       url: ctx.config.signalkUrl,
       since: sk?.connectedSince ? iso(sk.connectedSince) : null,
-      authorized: readToken(ctx.config.configDir, DEVICE_TOKEN) !== null || readToken(ctx.config.configDir, BROWSER_TOKEN) !== null,
+      authorized: readToken(ctx.config.dataDir, DEVICE_TOKEN) !== null,
+      accessRequest: ['approved', 'pending', 'denied', 'not-required', 'error'].includes(access) ? access : 'unknown',
     },
     gps: { fix: !gps.stale, ageMs: gps.ageMs },
-    clock: await clockStatus(),
+    time: { source: time.source, now: iso(time.now), driftMs: time.driftMs },
+    cpuTempC: await cpuTemperature(ctx.ha, getSetting(ctx.db, 'cpuTempEntity', DEFAULT_CPU_TEMP_ENTITY)),
     disk: diskStatus(ctx.config.dataDir),
-    lastBackup: getSetting<string | null>(ctx.db, 'lastBackupAt', null),
+    lastSnapshot: snapshotTime(ctx.config.snapshotFile),
     passage: { active: passage !== undefined, name: passage?.name ?? null },
-    serverTime: iso(now),
     version: ctx.config.version,
   });
 }

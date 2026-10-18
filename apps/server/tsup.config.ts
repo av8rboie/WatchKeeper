@@ -2,7 +2,8 @@ import { cpSync } from 'node:fs';
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/main.ts'],
+  // main: the add-on process. snapshot: the backup_pre hook (/usr/bin/data-hub-snapshot).
+  entry: { main: 'src/main.ts', snapshot: 'src/snapshot-cli.ts' },
   format: ['esm'],
   target: 'node22',
   outDir: 'dist',

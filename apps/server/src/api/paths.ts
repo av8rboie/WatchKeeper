@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { PathInfoSchema, type PathInfo } from '@watchkeeper/shared';
+import { effectiveStaleMs, PathInfoSchema, type PathInfo } from '@watchkeeper/shared';
 import { z } from 'zod';
 import type { AppContext } from '../app.js';
 
@@ -48,15 +48,18 @@ export function registerPathRoutes(api: FastifyInstance, ctx: AppContext): void 
         // Not subscribed by the backend: use the REST snapshot.
         value = leaf.value;
         ageMs = leaf.timestamp ? Math.max(0, now - Date.parse(leaf.timestamp)) : null;
-        stale = ageMs === null || (def.staleMs !== null && ageMs > def.staleMs);
+        const timeout = effectiveStaleMs(def);
+        stale = ageMs === null || (timeout !== null && ageMs > timeout);
       }
       out.push({
         path,
         label: def.label,
         siUnit: def.siUnit,
         quantity: def.quantity,
-        staleMs: def.staleMs,
+        rateClass: def.rateClass,
+        staleMs: effectiveStaleMs(def),
         inCatalog: catalog.has(path),
+        live: catalog.has(path),
         value: value ?? null,
         ageMs,
         stale,

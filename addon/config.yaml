@@ -1,0 +1,37 @@
+# Keys verified against the HA add-on configuration reference
+# (contributors.home-assistant.io/apps/reference/configuration), Oct 2026.
+name: Data Hub
+version: "0.1.0"
+slug: data_hub
+description: Dashboards, logbook and maintenance for the boat
+url: https://github.com/av8rboie/WatchKeeper
+arch: [aarch64, amd64]
+# No tag: the Supervisor pulls the tag matching `version`. CI publishes both arches.
+image: ghcr.io/av8rboie/data-hub-{arch}
+init: false
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:sail-boat
+panel_title: Data Hub
+hassio_api: true
+hassio_role: manager          # needed for host shutdown on UPS low voltage
+homeassistant_api: true       # summary entities and notifications
+gpio: true                    # sounder and UPS signal pins
+watchdog: "http://[HOST]:[PORT:8099]/api/v1/health"
+backup: hot
+backup_pre: /usr/bin/data-hub-snapshot
+backup_exclude:
+  - "data-hub.db"
+  - "data-hub.db-wal"
+  - "data-hub.db-shm"
+options:
+  # Replace with the Signal K add-on's hostname from its info page.
+  signalk_url: "http://SIGNALK_ADDON_HOST:3000"
+  sounder_gpio: null
+  ups_gpio: null
+  log_level: info
+schema:
+  signalk_url: url
+  sounder_gpio: "int?"
+  ups_gpio: "int?"
+  log_level: list(debug|info|warn|error)

@@ -1,33 +1,41 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import type { Me } from '@watchkeeper/shared';
-import { api, ApiError, useSetupStatus, useSystemStatus } from '../api/client';
+import { api, ApiError, useMe, useSetupStatus, useSystemStatus } from '../api/client';
+import { RoleMapping } from '../settings/RoleMapping';
 import { UnitsForm } from '../settings/UnitsForm';
-import { Card, FormField, PrimaryButton, StatusPill } from '../shell/components';
+import { Card, PrimaryButton, StatusPill } from '../shell/components';
 
-type Step = 'skipper' | 'signalk' | 'units';
+type Step = 'claim' | 'signalk' | 'roles' | 'units';
+const STEPS: Step[] = ['claim', 'signalk', 'roles', 'units'];
 
-/** First run: skipper account, Signal K device approval, units. */
+/** First run: claim the skipper role, approve the Signal K device, map HA users to roles, units. */
 export function SetupScreen() {
   const setup = useSetupStatus();
-  const [step, setStep] = useState<Step>('skipper');
+  const me = useMe();
+  const [step, setStep] = useState<Step>('claim');
   const navigate = useNavigate();
 
-  if (setup.data && !setup.data.needsSetup && step === 'skipper') {
-    navigate('/login', { replace: true });
-    return null;
-  }
+  // Setup is done and this person didn't just claim it: nothing to do here.
+  if (setup.data && !setup.data.needsSetup && step === 'claim') return <Navigate to="/" replace />;
 
   return (
     <main className="login">
       <h1 className="screen-title">Set up Data Hub</h1>
-      <div className="login__panel" style={{ maxWidth: 480 }}>
-        <div className="label">Step {step === 'skipper' ? 1 : step === 'signalk' ? 2 : 3} of 3</div>
-        {step === 'skipper' ? <SkipperStep onDone={() => setStep('signalk')} /> : null}
-        {step === 'signalk' ? <SignalKStep onDone={() => setStep('units')} /> : null}
+      <div className="login__panel" style={{ maxWidth: 560 }}>
+        <div className="label">
+          Step {STEPS.indexOf(step) + 1} of {STEPS.length}
+        </div>
+        {step === 'claim' ? <ClaimStep name={me.data?.name ?? 'you'} onDone={() => setStep('signalk')} /> : null}
+        {step === 'signalk' ? <SignalKStep onDone={() => setStep('roles')} /> : null}
+        {step === 'roles' ? (
+          <Card title="Crew and roles">
+            <RoleMapping submitLabel="Save and continue" onSaved={() => setStep('units')} />
+          </Card>
+        ) : null}
         {step === 'units' ? (
-          <Card title="Units">
+          <Card title="Your units">
             <UnitsForm submitLabel="Finish setup" onSaved={() => navigate('/', { replace: true })} />
           </Card>
         ) : null}
@@ -36,42 +44,29 @@ export function SetupScreen() {
   );
 }
 
-function SkipperStep({ onDone }: { onDone(): void }) {
-  const [name, setName] = useState('');
-  const [pin, setPin] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [error, setError] = useState<string | null>(null);
+function ClaimStep({ name, onDone }: { name: string; onDone(): void }) {
   const qc = useQueryClient();
-
-  const submit = async () => {
-    if (!/^\d{4,8}$/.test(pin)) return setError('PIN is 4 to 8 digits.');
-    if (pin !== confirm) return setError('The PINs do not match.');
+  const [error, setError] = useState<string | null>(null);
+  const claim = async () => {
     try {
-      const me = await api<Me>('/setup/skipper', { method: 'POST', body: { name, pin } });
+      const me = await api<Me>('/setup/claim', { method: 'POST' });
       qc.setQueryData(['me'], me);
       qc.setQueryData(['setup'], { needsSetup: false });
       onDone();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not create the account.');
+      setError(e instanceof ApiError ? e.message : 'Could not claim the skipper role.');
     }
   };
-
   return (
-    <Card title="Skipper account">
-      <form className="stack" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
-        <p className="muted" style={{ margin: 0 }}>The skipper can change settings, users, thresholds and dashboards.</p>
-        <FormField label="Name">{(id) => <input id={id} className="input" value={name} onChange={(e) => setName(e.target.value)} required autoComplete="name" />}</FormField>
-        <div className="grid-2">
-          <FormField label="PIN" hint="4 to 8 digits">
-            {(id) => <input id={id} className="input" type="password" inputMode="numeric" autoComplete="new-password" value={pin} onChange={(e) => setPin(e.target.value)} required />}
-          </FormField>
-          <FormField label="Confirm PIN">
-            {(id) => <input id={id} className="input" type="password" inputMode="numeric" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />}
-          </FormField>
-        </div>
+    <Card title="Skipper">
+      <div className="stack">
+        <p style={{ margin: 0 }}>
+          Data Hub has no skipper yet. Signed in to Home Assistant as <b>{name}</b>, you can claim the role. The skipper maps everyone else to
+          crew or guest.
+        </p>
         {error ? <div className="field__error" role="alert">{error}</div> : null}
-        <PrimaryButton type="submit" disabled={!name.trim()}>Create skipper account</PrimaryButton>
-      </form>
+        <PrimaryButton onClick={() => void claim()}>I am the skipper</PrimaryButton>
+      </div>
     </Card>
   );
 }
@@ -88,15 +83,22 @@ function SignalKStep({ onDone }: { onDone(): void }) {
           <dt>Connection</dt>
           <dd>{sk ? <StatusPill tone={sk.connected ? 'good' : 'alarm'}>{sk.connected ? 'Connected' : 'Not connected'}</StatusPill> : '…'}</dd>
           <dt>Device access</dt>
-          <dd>{sk ? <StatusPill tone={sk.authorized ? 'good' : 'warn'}>{sk.authorized ? 'Approved' : 'Not approved yet'}</StatusPill> : '…'}</dd>
+          <dd>
+            {sk ? (
+              <StatusPill tone={sk.authorized ? 'good' : 'warn'}>
+                {sk.authorized ? 'Approved' : sk.accessRequest === 'pending' ? 'Waiting for approval' : 'Not approved'}
+              </StatusPill>
+            ) : (
+              '…'
+            )}
+          </dd>
         </dl>
         {sk && !sk.authorized ? (
           <div className="info-box">
-            If Signal K security is on, approve the access request named “Data Hub (backend)” in the Signal K admin UI under Security, then
-            Access Requests. Approve “Data Hub (browsers, read only)” as read only. Without security, no approval is needed.
+            Open the Signal K add-on's web UI, go to Security, then Access Requests, and approve “Data Hub” with read/write permission.
           </div>
         ) : null}
-        <p className="muted" style={{ margin: 0 }}>The server address is set during install (SIGNALK_URL in the Data Hub config).</p>
+        <p className="muted" style={{ margin: 0 }}>The server address is the add-on option signalk_url.</p>
         <PrimaryButton onClick={onDone}>Continue</PrimaryButton>
       </div>
     </Card>

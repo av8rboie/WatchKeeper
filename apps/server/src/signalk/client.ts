@@ -1,8 +1,19 @@
 import { EventEmitter } from 'node:events';
 import WebSocket from 'ws';
+import { RATE_PERIOD_MS, type RateClass } from '@watchkeeper/shared';
 import { iso, type Clock } from '../clock.js';
 import { buildDelta, type OutboundValue } from './outbound.js';
 import type { LiveStore } from './store.js';
+
+export interface Subscription {
+  path: string;
+  periodMs: number;
+}
+
+/** Subscriptions for catalog paths at their rate-class periods. */
+export function subscriptionsFor(paths: string[], describe: (p: string) => { rateClass: RateClass }): Subscription[] {
+  return paths.map((path) => ({ path, periodMs: RATE_PERIOD_MS[describe(path).rateClass] }));
+}
 
 export interface GapRecorder {
   open(atMs: number): void;
@@ -17,7 +28,6 @@ export interface SignalKClientOptions {
   token?: () => string | null;
   initialBackoffMs?: number;
   maxBackoffMs?: number;
-  periodMs?: number;
   log?: { info(msg: string): void; warn(msg: string): void };
 }
 
@@ -35,7 +45,7 @@ interface SignalKDelta {
  */
 export class SignalKClient extends EventEmitter {
   private ws: WebSocket | null = null;
-  private paths: string[] = [];
+  private subs: Subscription[] = [];
   private backoff: number;
   private timer: NodeJS.Timeout | null = null;
   private stopped = true;
@@ -77,8 +87,9 @@ export class SignalKClient extends EventEmitter {
     this.ws?.terminate();
   }
 
-  setSubscriptions(paths: string[]): void {
-    this.paths = [...new Set(paths)];
+  /** Each path at its rate-class period. Browsers never change these rates. */
+  setSubscriptions(subs: Subscription[]): void {
+    this.subs = [...new Map(subs.map((s) => [s.path, s])).values()];
     if (this.connected) this.sendSubscribe();
   }
 
@@ -158,12 +169,11 @@ export class SignalKClient extends EventEmitter {
   }
 
   private sendSubscribe(): void {
-    if (!this.ws || this.paths.length === 0) return;
-    const period = this.opts.periodMs ?? 1000;
+    if (!this.ws || this.subs.length === 0) return;
     this.ws.send(
       JSON.stringify({
         context: 'vessels.self',
-        subscribe: this.paths.map((path) => ({ path, period, policy: 'instant' })),
+        subscribe: this.subs.map((s) => ({ path: s.path, period: s.periodMs, policy: 'instant' })),
       }),
     );
   }

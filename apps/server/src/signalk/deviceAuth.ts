@@ -1,6 +1,6 @@
 // Signal K device access-request flow. On first run the backend asks Signal K
-// for a token; the skipper approves it once in the Signal K admin UI. Tokens
-// are stored in the config directory with 0600 permissions.
+// for a token; the skipper approves it once in the Signal K admin UI. The
+// token is stored in /data with 0600 permissions.
 
 import { randomUUID } from 'node:crypto';
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -14,9 +14,8 @@ interface TokenSpec {
   description: string;
 }
 
-/** The backend's write token, and a read-only token handed to browsers. */
-export const DEVICE_TOKEN: TokenSpec = { name: 'signalk-token', permission: 'readwrite', description: 'Data Hub (backend)' };
-export const BROWSER_TOKEN: TokenSpec = { name: 'signalk-read-token', permission: 'readonly', description: 'Data Hub (browsers, read only)' };
+/** The backend's token. Browsers never talk to Signal K, so this is the only one. */
+export const DEVICE_TOKEN: TokenSpec = { name: 'signalk-token', permission: 'readwrite', description: 'Data Hub' };
 
 function writeSecret(file: string, content: string): void {
   writeFileSync(file, content, { mode: 0o600 });

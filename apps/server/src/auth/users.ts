@@ -1,21 +1,24 @@
 import argon2 from 'argon2';
 import { createHash, randomBytes } from 'node:crypto';
-import { ulid } from 'ulid';
-import { DEFAULT_UNIT_PREFS, UnitPrefsSchema, type Role, type UnitPrefs } from '@watchkeeper/shared';
+import { DEFAULT_UNIT_PREFS, UnitPrefsSchema, type Role, type UnitPrefs, type UserMapping } from '@watchkeeper/shared';
 import { iso, type Clock } from '../clock.js';
 import type { DB } from '../db/index.js';
 
 export const MAX_BAD_PINS = 5;
 export const LOCKOUT_MS = 5 * 60_000;
-export const SESSION_TTL_MS = 30 * 24 * 3600_000;
-/** Extend a session's expiry at most once a day. */
-const SLIDE_AFTER_MS = 24 * 3600_000;
+/** A PIN elevation on a shared helm device lasts 12 hours. */
+export const ELEVATION_TTL_MS = 12 * 3600_000;
+/** Update last_seen at most this often per user. */
+const SEEN_THROTTLE_MS = 60_000;
 
-export interface SessionUser {
+export interface UserRecord {
   id: string;
   name: string;
   role: Role;
+  mapped: boolean;
+  hasPin: boolean;
   unitPrefs: UnitPrefs;
+  lastSeen: string | null;
 }
 
 interface UserRow {
@@ -24,78 +27,105 @@ interface UserRow {
   role: Role;
   pin_hash: string;
   unit_prefs: string;
+  mapped: number;
+  last_seen: string | null;
   failed_pins: number;
   locked_until: string | null;
 }
 
-function toSessionUser(r: Pick<UserRow, 'id' | 'name' | 'role' | 'unit_prefs'>): SessionUser {
+function toRecord(r: UserRow): UserRecord {
   return {
     id: r.id,
     name: r.name,
-    role: r.role,
+    role: r.mapped ? r.role : 'guest',
+    mapped: r.mapped === 1,
+    hasPin: r.pin_hash !== '',
     unitPrefs: UnitPrefsSchema.parse({ ...DEFAULT_UNIT_PREFS, ...(JSON.parse(r.unit_prefs) as object) }),
+    lastSeen: r.last_seen,
   };
 }
 
 export const hashPin = (pin: string) => argon2.hash(pin, { type: argon2.argon2id });
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
 
+/**
+ * HA users seen through ingress, with the roles the skipper mapped. Unmapped
+ * users are guests.
+ */
 export class Users {
+  private readonly seenAt = new Map<string, number>();
+
   constructor(
     private readonly db: DB,
     private readonly clock: Clock,
   ) {}
 
-  count(): number {
-    return (this.db.prepare('SELECT COUNT(*) AS n FROM user').get() as { n: number }).n;
-  }
-
-  list(): { id: string; name: string; role: Role }[] {
-    return this.db.prepare('SELECT id, name, role FROM user ORDER BY role DESC, name').all() as { id: string; name: string; role: Role }[];
-  }
-
-  get(id: string): SessionUser | null {
-    const r = this.db.prepare('SELECT id, name, role, unit_prefs FROM user WHERE id = ?').get(id) as UserRow | undefined;
-    return r ? toSessionUser(r) : null;
-  }
-
-  async create(name: string, role: Role, pin: string): Promise<SessionUser> {
-    const id = ulid();
-    this.db
-      .prepare('INSERT INTO user (id, name, role, pin_hash, unit_prefs, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(id, name, role, await hashPin(pin), '{}', iso(this.clock.now()));
+  /** Record an HA user from the ingress headers; creates them as an unmapped guest. */
+  seen(id: string, name: string): UserRecord {
+    const now = this.clock.now();
+    const last = this.seenAt.get(id);
+    if (last === undefined || now - last > SEEN_THROTTLE_MS) {
+      this.db
+        .prepare(
+          `INSERT INTO user (id, name, role, pin_hash, created_at, last_seen) VALUES (?, ?, 'guest', '', ?, ?)
+           ON CONFLICT(id) DO UPDATE SET name = excluded.name, last_seen = excluded.last_seen`,
+        )
+        .run(id, name, iso(now), iso(now));
+      this.seenAt.set(id, now);
+    }
     return this.get(id)!;
   }
 
-  async update(id: string, patch: { name?: string; role?: Role; pin?: string }): Promise<SessionUser | null> {
-    if (patch.name !== undefined) this.db.prepare('UPDATE user SET name = ? WHERE id = ?').run(patch.name, id);
-    if (patch.role !== undefined) this.db.prepare('UPDATE user SET role = ? WHERE id = ?').run(patch.role, id);
-    if (patch.pin !== undefined) this.db.prepare('UPDATE user SET pin_hash = ? WHERE id = ?').run(await hashPin(patch.pin), id);
-    return this.get(id);
+  get(id: string): UserRecord | null {
+    const r = this.db.prepare('SELECT * FROM user WHERE id = ?').get(id) as UserRow | undefined;
+    return r ? toRecord(r) : null;
   }
 
-  remove(id: string): boolean {
-    return this.db.prepare('DELETE FROM user WHERE id = ?').run(id).changes > 0;
+  list(): UserMapping[] {
+    const rows = this.db.prepare('SELECT * FROM user ORDER BY mapped DESC, name').all() as UserRow[];
+    return rows.map((r) => {
+      const u = toRecord(r);
+      return { id: u.id, name: u.name, role: u.role, mapped: u.mapped, hasPin: u.hasPin, lastSeen: u.lastSeen };
+    });
+  }
+
+  skipperCount(): number {
+    return (this.db.prepare("SELECT COUNT(*) AS n FROM user WHERE mapped = 1 AND role = 'skipper'").get() as { n: number }).n;
+  }
+
+  /** Users whose PIN can elevate a guest device: mapped crew or skipper with a PIN. */
+  pinUsers(): { id: string; name: string }[] {
+    return this.db
+      .prepare("SELECT id, name FROM user WHERE mapped = 1 AND role IN ('crew','skipper') AND pin_hash != '' ORDER BY name")
+      .all() as { id: string; name: string }[];
+  }
+
+  async setMapping(id: string, role: Role, pin: string | null | undefined): Promise<boolean> {
+    const changes = this.db.prepare('UPDATE user SET role = ?, mapped = 1 WHERE id = ?').run(role, id).changes;
+    if (changes === 0) return false;
+    if (pin === null) this.db.prepare("UPDATE user SET pin_hash = '' WHERE id = ?").run(id);
+    else if (pin !== undefined) this.db.prepare('UPDATE user SET pin_hash = ? WHERE id = ?').run(await hashPin(pin), id);
+    return true;
   }
 
   setUnitPrefs(id: string, prefs: UnitPrefs): void {
     this.db.prepare('UPDATE user SET unit_prefs = ? WHERE id = ?').run(JSON.stringify(prefs), id);
   }
 
-  /** Check a PIN, applying the 5-strikes lockout. */
+  /** Check a helm PIN, applying the 5-strikes lockout. */
   async verifyPin(
     id: string,
     pin: string,
-  ): Promise<{ ok: true; user: SessionUser } | { ok: false; reason: 'unknown' | 'bad-pin' | 'locked'; retryAfterMs?: number }> {
+  ): Promise<{ ok: true; user: UserRecord } | { ok: false; reason: 'unknown' | 'bad-pin' | 'locked'; retryAfterMs?: number }> {
     const r = this.db.prepare('SELECT * FROM user WHERE id = ?').get(id) as UserRow | undefined;
-    if (!r) return { ok: false, reason: 'unknown' };
+    if (!r || r.pin_hash === '' || !r.mapped || r.role === 'guest') return { ok: false, reason: 'unknown' };
     const now = this.clock.now();
     if (r.locked_until && Date.parse(r.locked_until) > now) {
       return { ok: false, reason: 'locked', retryAfterMs: Date.parse(r.locked_until) - now };
     }
     if (await argon2.verify(r.pin_hash, pin)) {
       this.db.prepare('UPDATE user SET failed_pins = 0, locked_until = NULL WHERE id = ?').run(id);
-      return { ok: true, user: toSessionUser(r) };
+      return { ok: true, user: toRecord(r) };
     }
     const failed = r.failed_pins + 1;
     if (failed >= MAX_BAD_PINS) {
@@ -107,48 +137,40 @@ export class Users {
   }
 }
 
-export class Sessions {
+/** PIN elevations: a cookie on one device, bound to the HA user who entered the PIN. */
+export class Elevations {
   constructor(
     private readonly db: DB,
     private readonly clock: Clock,
   ) {}
 
-  create(userId: string): { token: string; expiresAt: number } {
+  create(userId: string, haUserId: string): { token: string; expiresAt: number } {
     const token = randomBytes(32).toString('base64url');
     const now = this.clock.now();
-    const expiresAt = now + SESSION_TTL_MS;
+    const expiresAt = now + ELEVATION_TTL_MS;
     this.db
-      .prepare('INSERT INTO session (id, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)')
-      .run(sha256(token), userId, iso(now), iso(expiresAt));
+      .prepare('INSERT INTO session (id, user_id, ha_user_id, created_at, expires_at) VALUES (?, ?, ?, ?, ?)')
+      .run(sha256(token), userId, haUserId, iso(now), iso(expiresAt));
     return { token, expiresAt };
   }
 
-  /** Resolve a token to its user, sliding the expiry forward. */
-  resolve(token: string): { userId: string; expiresAt: number; slid: boolean } | null {
+  /** The acting user for this token, if it is unexpired and was made by this HA user. */
+  resolve(token: string, haUserId: string): { userId: string; expiresAt: number } | null {
     const id = sha256(token);
-    const row = this.db.prepare('SELECT user_id, expires_at FROM session WHERE id = ?').get(id) as
-      | { user_id: string; expires_at: string }
+    const row = this.db.prepare('SELECT user_id, ha_user_id, expires_at FROM session WHERE id = ?').get(id) as
+      | { user_id: string; ha_user_id: string; expires_at: string }
       | undefined;
     if (!row) return null;
-    const now = this.clock.now();
     const expiresAt = Date.parse(row.expires_at);
-    if (expiresAt <= now) {
+    if (expiresAt <= this.clock.now()) {
       this.db.prepare('DELETE FROM session WHERE id = ?').run(id);
       return null;
     }
-    if (now + SESSION_TTL_MS - expiresAt > SLIDE_AFTER_MS) {
-      const next = now + SESSION_TTL_MS;
-      this.db.prepare('UPDATE session SET expires_at = ? WHERE id = ?').run(iso(next), id);
-      return { userId: row.user_id, expiresAt: next, slid: true };
-    }
-    return { userId: row.user_id, expiresAt, slid: false };
+    if (row.ha_user_id !== haUserId) return null;
+    return { userId: row.user_id, expiresAt };
   }
 
   revoke(token: string): void {
     this.db.prepare('DELETE FROM session WHERE id = ?').run(sha256(token));
-  }
-
-  purgeExpired(): void {
-    this.db.prepare('DELETE FROM session WHERE expires_at <= ?').run(iso(this.clock.now()));
   }
 }

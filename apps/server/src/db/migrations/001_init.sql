@@ -2,20 +2,27 @@
 -- "added" and are permitted by it (new tables, columns and indexes only).
 
 -- users and settings
+-- id is the Home Assistant user id from the ingress headers. pin_hash is ''
+-- for users without a helm PIN.
 CREATE TABLE user (
   id TEXT PRIMARY KEY, name TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('skipper','crew','guest')),
   pin_hash TEXT NOT NULL, unit_prefs TEXT NOT NULL DEFAULT '{}',
   created_at TEXT NOT NULL,
+  mapped INTEGER NOT NULL DEFAULT 0,        -- added: role set by the skipper
+  last_seen TEXT,                           -- added: last request through ingress
   failed_pins INTEGER NOT NULL DEFAULT 0,   -- added: PIN lockout
   locked_until TEXT                          -- added: PIN lockout
 );
 CREATE TABLE setting (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 
--- added: login sessions. id is the SHA-256 of the cookie token.
+-- added: PIN elevations. A guest device elevates to act as a crew member
+-- for 12 h. id is the SHA-256 of the cookie token; the elevation only holds
+-- for the HA user who entered the PIN.
 CREATE TABLE session (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  ha_user_id TEXT NOT NULL,
   created_at TEXT NOT NULL,
   expires_at TEXT NOT NULL
 );

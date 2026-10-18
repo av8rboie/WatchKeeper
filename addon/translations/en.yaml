@@ -1,0 +1,15 @@
+configuration:
+  signalk_url:
+    name: Signal K URL
+    description: >-
+      The Signal K add-on's address on the HA network, port 3000. Find the
+      hostname on the Signal K add-on's info page.
+  sounder_gpio:
+    name: Sounder GPIO pin
+    description: GPIO line that drives the onboard alarm sounder. Leave empty if there is no GPIO sounder.
+  ups_gpio:
+    name: UPS low-voltage GPIO pin
+    description: GPIO line the UPS HAT pulls on low input voltage. Data Hub then logs it and shuts the host down cleanly.
+  log_level:
+    name: Log level
+    description: How much the add-on writes to its log.

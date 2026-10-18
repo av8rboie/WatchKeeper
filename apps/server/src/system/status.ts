@@ -1,48 +1,35 @@
-import { execFile } from 'node:child_process';
-import { statfsSync } from 'node:fs';
-import { promisify } from 'node:util';
+import { readFileSync, statfsSync } from 'node:fs';
+import type { HaClient } from '../ha/client.js';
 
-const run = promisify(execFile);
+/** HA's system monitor CPU temperature sensor. Configurable in settings. */
+export const DEFAULT_CPU_TEMP_ENTITY = 'sensor.system_monitor_processor_temperature';
 
-export interface ClockStatus {
-  synced: boolean | null;
-  source: string | null;
-  offsetMs: number | null;
-}
-
-let cached: { at: number; value: ClockStatus } | null = null;
+let cachedTemp: { at: number; value: number | null } | null = null;
 
 /**
- * Read chrony's sync state. `chronyc -c tracking` prints one CSV line; the
- * last field is the leap status, "Normal" when synchronised. Returns nulls
- * where chrony isn't available (dev machines).
+ * CPU temperature in °C: HA's system monitor sensor first (the spec's
+ * source), the kernel thermal zone as a fallback. Cached for 30 s.
  */
-export async function clockStatus(): Promise<ClockStatus> {
-  if (cached && Date.now() - cached.at < 10_000) return cached.value;
-  let value: ClockStatus = { synced: null, source: null, offsetMs: null };
-  if (process.platform === 'linux') {
+export async function cpuTemperature(ha: HaClient, entityId: string): Promise<number | null> {
+  if (cachedTemp && Date.now() - cachedTemp.at < 30_000) return cachedTemp.value;
+  let value: number | null = null;
+  try {
+    const s = await ha.getState(entityId);
+    const n = s ? Number(s.state) : NaN;
+    if (Number.isFinite(n)) value = n;
+  } catch {
+    // HA unreachable; try the kernel.
+  }
+  if (value === null) {
     try {
-      const { stdout } = await run('chronyc', ['-c', 'tracking'], { timeout: 1500 });
-      value = parseChronyTracking(stdout);
+      const milli = Number(readFileSync('/sys/class/thermal/thermal_zone0/temp', 'utf8').trim());
+      if (Number.isFinite(milli)) value = milli / 1000;
     } catch {
-      value = { synced: false, source: null, offsetMs: null };
+      // Not on Linux, or no thermal zone exposed.
     }
   }
-  cached = { at: Date.now(), value };
+  cachedTemp = { at: Date.now(), value };
   return value;
-}
-
-export function parseChronyTracking(csv: string): ClockStatus {
-  const f = csv.trim().split(',');
-  const refName = f[1] ?? null;
-  const stratum = Number(f[2]);
-  const offsetSec = Number(f[4]);
-  const leap = f[f.length - 1]?.trim();
-  return {
-    synced: leap === 'Normal' && stratum > 0 && stratum < 16,
-    source: refName && refName !== '' ? refName : null,
-    offsetMs: Number.isFinite(offsetSec) ? offsetSec * 1000 : null,
-  };
 }
 
 export function diskStatus(dir: string): { freeBytes: number | null; totalBytes: number | null } {

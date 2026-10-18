@@ -1,0 +1,6 @@
+#!/bin/sh
+# backup_pre hook: consistent copy of the live database to /data/snapshot/
+# while logging continues. The live database and WAL are excluded from the backup.
+set -e
+export DATA_DIR=/data
+exec node /app/server/dist/snapshot.js

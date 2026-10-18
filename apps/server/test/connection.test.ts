@@ -32,7 +32,11 @@ describe('Signal K connection', () => {
     const gaps = new ConnectionGaps(db);
     const store = new LiveStore(systemClock);
     client = new SignalKClient({ url: server.url, store, clock: systemClock, gaps, initialBackoffMs: 50, maxBackoffMs: 200 });
-    client.setSubscriptions(['navigation.speedOverGround', 'navigation.position']);
+    client.setSubscriptions([
+      { path: 'navigation.speedOverGround', periodMs: 1000 },
+      { path: 'navigation.position', periodMs: 1000 },
+      { path: 'environment.depth.belowKeel', periodMs: 5000 },
+    ]);
     client.start();
     await until(() => client!.connected);
 
@@ -40,7 +44,11 @@ describe('Signal K connection', () => {
     await until(() => server!.subscriptions.length > 0);
     expect(server.subscriptions[0]).toMatchObject({
       context: 'vessels.self',
-      subscribe: [{ path: 'navigation.speedOverGround', period: 1000, policy: 'instant' }, { path: 'navigation.position' }],
+      subscribe: [
+        { path: 'navigation.speedOverGround', period: 1000, policy: 'instant' },
+        { path: 'navigation.position', period: 1000 },
+        { path: 'environment.depth.belowKeel', period: 5000 },
+      ],
     });
 
     server.send(generate({ seconds: 1, start: Date.now() }).next().value!.delta);

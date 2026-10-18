@@ -1,24 +1,30 @@
-import type { FastifyInstance } from 'fastify';
-import {
-  CreateUserSchema,
-  LoginRequestSchema,
-  MeSchema,
-  SetupSkipperSchema,
-  UnitPrefsSchema,
-  UpdateUserSchema,
-  UserPublicSchema,
-} from '@watchkeeper/shared';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
+import { MeSchema, PinElevateSchema, PinUserSchema, PutUsersSchema, UnitPrefsSchema, UserMappingSchema, type Me } from '@watchkeeper/shared';
 import { z } from 'zod';
-import { SESSION_COOKIE, type AppContext } from '../app.js';
-import { BROWSER_TOKEN, readToken } from '../signalk/deviceAuth.js';
+import { ELEVATION_COOKIE, type AppContext } from '../app.js';
 
-const IdParam = z.object({ id: z.string().min(1) });
+function me(req: FastifyRequest): Me {
+  const u = req.user!;
+  return MeSchema.parse({ id: u.haId, name: u.name, role: u.role, roleSource: u.roleSource, actingAs: u.actingAs, unitPrefs: u.unitPrefs });
+}
 
 export function registerAuthRoutes(api: FastifyInstance, ctx: AppContext): void {
-  const { users, sessions } = ctx;
+  const { users, elevations } = ctx;
 
-  api.post('/auth/login', { config: { minRole: 'public' } }, async (req, reply) => {
-    const body = LoginRequestSchema.parse(req.body);
+  api.get('/auth/me', { config: { minRole: 'guest' } }, async (req) => me(req));
+
+  api.put('/auth/me/units', { config: { minRole: 'crew' } }, async (req) => {
+    const prefs = UnitPrefsSchema.parse(req.body);
+    users.setUnitPrefs(req.user!.haId, prefs);
+    return MeSchema.parse({ ...me(req), unitPrefs: prefs });
+  });
+
+  // Shared helm devices: a guest HA user elevates to crew for 12 h with a
+  // crew member's PIN. Entries made while elevated are recorded as that crew member.
+  api.get('/auth/pin-users', { config: { minRole: 'guest' } }, async () => z.array(PinUserSchema).parse(users.pinUsers()));
+
+  api.post('/auth/pin', { config: { minRole: 'guest' } }, async (req, reply) => {
+    const body = PinElevateSchema.parse(req.body);
     const result = await users.verifyPin(body.userId, body.pin);
     if (!result.ok) {
       if (result.reason === 'locked') {
@@ -27,62 +33,48 @@ export function registerAuthRoutes(api: FastifyInstance, ctx: AppContext): void 
       }
       return reply.code(401).send({ error: 'bad_credentials' });
     }
-    const s = sessions.create(result.user.id);
-    ctx.setSessionCookie(reply, s.token, s.expiresAt);
-    return MeSchema.parse(result.user);
+    const e = elevations.create(result.user.id, req.user!.haId);
+    reply.setCookie(ELEVATION_COOKIE, e.token, { httpOnly: true, sameSite: 'strict', path: '/', expires: new Date(e.expiresAt) });
+    return MeSchema.parse({
+      ...me(req),
+      role: req.user!.role === 'guest' ? 'crew' : req.user!.role,
+      roleSource: req.user!.role === 'guest' ? 'pin' : req.user!.roleSource,
+      actingAs: { id: result.user.id, name: result.user.name, until: new Date(e.expiresAt).toISOString() },
+    });
   });
 
-  api.post('/auth/logout', { config: { minRole: 'public' } }, async (req, reply) => {
-    const token = req.cookies[SESSION_COOKIE];
-    if (token) sessions.revoke(token);
-    reply.clearCookie(SESSION_COOKIE, { path: '/' });
+  api.delete('/auth/pin', { config: { minRole: 'crew' } }, async (req, reply) => {
+    const token = req.cookies[ELEVATION_COOKIE];
+    if (token) elevations.revoke(token);
+    reply.clearCookie(ELEVATION_COOKIE, { path: '/' });
     return { ok: true };
   });
 
-  api.get('/auth/me', { config: { minRole: 'guest' } }, async (req) => MeSchema.parse(req.user));
+  // Role mapping: the skipper assigns HA users to roles. Unmapped users are guests.
+  api.get('/users', { config: { minRole: 'skipper' } }, async () => z.array(UserMappingSchema).parse(users.list()));
 
-  api.put('/auth/me/units', { config: { minRole: 'crew' } }, async (req) => {
-    const prefs = UnitPrefsSchema.parse(req.body);
-    users.setUnitPrefs(req.user!.id, prefs);
-    return MeSchema.parse(users.get(req.user!.id));
+  api.put('/users', { config: { minRole: 'skipper' } }, async (req, reply) => {
+    const body = PutUsersSchema.parse(req.body);
+    const current = new Map(users.list().map((u) => [u.id, u]));
+    for (const u of body.users) {
+      if (!current.has(u.id)) return reply.code(404).send({ error: 'not_found', message: `Unknown user ${u.id}` });
+    }
+    const skippersAfter = [...current.values()].filter((u) => {
+      const change = body.users.find((c) => c.id === u.id);
+      return (change ? change.role : u.role) === 'skipper';
+    }).length;
+    if (skippersAfter === 0) return reply.code(409).send({ error: 'conflict', message: 'The boat needs at least one skipper.' });
+    for (const u of body.users) await users.setMapping(u.id, u.role, u.pin);
+    return z.array(UserMappingSchema).parse(users.list());
   });
 
-  api.get('/auth/signalk-token', { config: { minRole: 'guest' } }, async () => ({
-    token: readToken(ctx.config.configDir, BROWSER_TOKEN),
-  }));
+  // First run: the first HA user to open Data Hub claims the skipper role.
+  // Closed once a skipper exists.
+  api.get('/setup/status', { config: { minRole: 'guest' } }, async () => ({ needsSetup: users.skipperCount() === 0 }));
 
-  // Login picker: names and roles only, never PINs.
-  api.get('/users', { config: { minRole: 'public' } }, async () => z.array(UserPublicSchema).parse(users.list()));
-
-  api.post('/users', { config: { minRole: 'skipper' } }, async (req, reply) => {
-    const body = CreateUserSchema.parse(req.body);
-    const u = await users.create(body.name, body.role, body.pin);
-    return reply.code(201).send(UserPublicSchema.parse(u));
-  });
-
-  api.put('/users/:id', { config: { minRole: 'skipper' } }, async (req, reply) => {
-    const { id } = IdParam.parse(req.params);
-    const u = await users.update(id, UpdateUserSchema.parse(req.body));
-    if (!u) return reply.code(404).send({ error: 'not_found' });
-    return UserPublicSchema.parse(u);
-  });
-
-  api.delete('/users/:id', { config: { minRole: 'skipper' } }, async (req, reply) => {
-    const { id } = IdParam.parse(req.params);
-    if (id === req.user!.id) return reply.code(409).send({ error: 'conflict', message: 'You cannot delete yourself.' });
-    if (!users.remove(id)) return reply.code(404).send({ error: 'not_found' });
-    return { ok: true };
-  });
-
-  // First run: create the skipper account. Closed once any user exists.
-  api.get('/setup/status', { config: { minRole: 'public' } }, async () => ({ needsSetup: users.count() === 0 }));
-
-  api.post('/setup/skipper', { config: { minRole: 'public' } }, async (req, reply) => {
-    if (users.count() > 0) return reply.code(403).send({ error: 'forbidden', message: 'Setup is already complete.' });
-    const body = SetupSkipperSchema.parse(req.body);
-    const u = await users.create(body.name, 'skipper', body.pin);
-    const s = sessions.create(u.id);
-    ctx.setSessionCookie(reply, s.token, s.expiresAt);
-    return reply.code(201).send(MeSchema.parse(u));
+  api.post('/setup/claim', { config: { minRole: 'guest' } }, async (req, reply) => {
+    if (users.skipperCount() > 0) return reply.code(403).send({ error: 'forbidden', message: 'This boat already has a skipper.' });
+    await users.setMapping(req.user!.haId, 'skipper', undefined);
+    return MeSchema.parse({ ...me(req), role: 'skipper', roleSource: 'mapped', actingAs: null });
   });
 }

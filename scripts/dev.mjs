@@ -1,4 +1,5 @@
-// pnpm dev: Signal K in Docker, the backend with watch, and Vite.
+// pnpm dev: Signal K in Docker, the backend with watch, Vite, and a dev
+// ingress proxy that mounts the app under /api/hassio_ingress/dev like HA.
 
 import { spawn, spawnSync } from 'node:child_process';
 
@@ -8,14 +9,17 @@ if (docker.status !== 0) console.warn('Could not start Signal K in Docker; the b
 const env = {
   ...process.env,
   DATA_DIR: process.env.DATA_DIR ?? '.data/dev',
-  COOKIE_SECURE: 'false',
   SIGNALK_URL: process.env.SIGNALK_URL ?? 'http://localhost:3000',
-  PORT: process.env.PORT ?? '8080',
+  PORT: '8099',
+  HOST: '127.0.0.1',
+  // The dev proxy plays the Supervisor's ingress proxy.
+  TRUSTED_PROXIES: '127.0.0.1',
 };
 
 const procs = [
   ['server', 'pnpm', ['--filter', '@watchkeeper/server', 'dev']],
   ['web', 'pnpm', ['--filter', '@watchkeeper/web', 'dev']],
+  ['ingress', 'pnpm', ['--filter', '@watchkeeper/server', 'exec', 'tsx', 'scripts/dev-proxy.ts']],
 ].map(([name, cmd, args]) => {
   const p = spawn(cmd, args, { env, shell: true });
   const prefix = (chunk) =>

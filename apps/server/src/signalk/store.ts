@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { describePath, type PathDef } from '@watchkeeper/shared';
+import { describePath, effectiveStaleMs, type PathDef } from '@watchkeeper/shared';
 import type { Clock } from '../clock.js';
 
 interface Entry {
@@ -19,8 +19,9 @@ export interface Reading {
 
 /**
  * Latest value per Signal K path plus the staleness tracker. A value is stale
- * once its age exceeds the path's timeout, when it has never been seen, or
- * while the Signal K connection is down.
+ * once its age exceeds the path's effective timeout (the larger of the catalog
+ * value and three times its period), when it has never been seen, or while the
+ * Signal K connection is down.
  */
 export class LiveStore extends EventEmitter {
   private readonly entries = new Map<string, Entry>();
@@ -54,7 +55,7 @@ export class LiveStore extends EventEmitter {
     const e = this.entries.get(path);
     if (!e) return { value: null, updatedAt: null, ageMs: null, stale: true };
     const ageMs = Math.max(0, now - e.updatedAt);
-    const timeout = this.def(path).staleMs;
+    const timeout = effectiveStaleMs(this.def(path));
     const stale = e.forcedStale || (timeout !== null && ageMs > timeout);
     return { value: e.value, updatedAt: e.updatedAt, ageMs, stale };
   }

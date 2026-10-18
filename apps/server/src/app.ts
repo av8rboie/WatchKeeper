@@ -1,39 +1,56 @@
 import cookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import websocket from '@fastify/websocket';
-import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
-import { existsSync } from 'node:fs';
+import Fastify, { LogController, type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ZodError } from 'zod';
-import { roleAtLeast, type Role } from '@watchkeeper/shared';
+import { roleAtLeast, type Role, type UnitPrefs } from '@watchkeeper/shared';
 import { registerAuthRoutes } from './api/auth.js';
 import type { EventHub } from './api/events.js';
 import { registerPathRoutes } from './api/paths.js';
 import { registerSystemRoutes } from './api/system.js';
-import { Sessions, Users, type SessionUser } from './auth/users.js';
+import { Elevations, Users } from './auth/users.js';
 import type { Clock } from './clock.js';
 import type { Config } from './config.js';
 import type { DB } from './db/index.js';
+import type { HaClient } from './ha/client.js';
 import type { SignalKClient } from './signalk/client.js';
 import type { LiveStore } from './signalk/store.js';
+import type { TimeSource } from './signalk/time.js';
 
-/** Minimum role for a route. `public` needs no session. */
+/** Minimum role for a route. `public` needs no HA user (only the health check). */
 export type MinRole = Role | 'public';
+
+/** Who is making the request, after ingress headers and any PIN elevation. */
+export interface RequestUser {
+  /** HA user id from ingress. */
+  haId: string;
+  name: string;
+  role: Role;
+  roleSource: 'mapped' | 'unmapped' | 'pin';
+  /** The crew member acting on a guest device, when elevated by PIN. */
+  actingAs: { id: string; name: string; until: string } | null;
+  /** The user id recorded on log entries and records: the acting crew member if elevated. */
+  recordId: string;
+  unitPrefs: UnitPrefs;
+}
 
 declare module 'fastify' {
   interface FastifyContextConfig {
     minRole?: MinRole;
   }
   interface FastifyRequest {
-    user: SessionUser | null;
+    user: RequestUser | null;
   }
   interface FastifyInstance {
     ctx: AppContext;
   }
 }
 
-export const SESSION_COOKIE = 'dh_session';
+export const ELEVATION_COOKIE = 'dh_elevation';
 export const API_PREFIX = '/api/v1';
+export const HEALTH_PATH = `${API_PREFIX}/health`;
 
 export interface AppDeps {
   db: DB;
@@ -42,10 +59,14 @@ export interface AppDeps {
   store: LiveStore;
   hub: EventHub;
   signalk: SignalKClient | null;
+  time: TimeSource;
+  ha: HaClient;
   /** Concrete catalog paths for this boat (instance ids applied). */
   catalogPaths: () => string[];
   /** Signal K REST snapshot of vessels/self, for paths outside the catalog. */
   fetchSelf?: () => Promise<unknown>;
+  /** Current state of the Signal K device access request. */
+  accessState?: () => string;
 }
 
 export interface RouteInfo {
@@ -56,32 +77,32 @@ export interface RouteInfo {
 
 export interface AppContext extends AppDeps {
   users: Users;
-  sessions: Sessions;
+  elevations: Elevations;
   /** Every API route and its minimum role. The role tests walk this list. */
   routes: RouteInfo[];
-  setSessionCookie(reply: FastifyReply, token: string, expiresAt: number): void;
+}
+
+/** IPv4-mapped IPv6 addresses (::ffff:172.30.32.2) compare as plain IPv4. */
+const normalizeAddress = (a: string | undefined) => (a ?? '').replace(/^::ffff:/, '');
+
+/** The ingress base path from HA, restricted to safe characters. */
+function ingressBase(req: FastifyRequest): string {
+  const raw = req.headers['x-ingress-path'];
+  const v = Array.isArray(raw) ? raw[0] : raw;
+  return v && /^\/[A-Za-z0-9/_-]*$/.test(v) ? v.replace(/\/$/, '') : '';
 }
 
 export async function buildApp(deps: AppDeps, opts: { logger?: boolean | object } = {}): Promise<FastifyInstance> {
-  const app = Fastify({ logger: opts.logger ?? false, trustProxy: true });
+  // No per-request logging: the watchdog polls /health, and every log line costs CPU on the boat.
+  const app = Fastify({ logger: opts.logger ?? false, logController: new LogController({ disableRequestLogging: true }) });
   const users = new Users(deps.db, deps.clock);
-  const sessions = new Sessions(deps.db, deps.clock);
-
-  const setSessionCookie = (reply: FastifyReply, token: string, expiresAt: number) => {
-    reply.setCookie(SESSION_COOKIE, token, {
-      httpOnly: true,
-      secure: deps.config.cookieSecure,
-      sameSite: 'strict',
-      path: '/',
-      expires: new Date(expiresAt),
-    });
-  };
-  const ctx: AppContext = { ...deps, users, sessions, routes: [], setSessionCookie };
+  const elevations = new Elevations(deps.db, deps.clock);
+  const ctx: AppContext = { ...deps, users, elevations, routes: [] };
   app.decorate('ctx', ctx);
+  const trusted = new Set(deps.config.trustedProxies.map(normalizeAddress));
 
   await app.register(cookie);
   await app.register(websocket);
-
   app.decorateRequest('user', null);
 
   // Every API route must declare who may call it.
@@ -94,20 +115,45 @@ export async function buildApp(deps: AppDeps, opts: { logger?: boolean | object 
     }
   });
 
+  // Ingress only: anything not from the Supervisor's proxy is rejected, except
+  // the health check the watchdog calls.
+  app.addHook('onRequest', async (req, reply) => {
+    if (req.url === HEALTH_PATH) return;
+    if (!trusted.has(normalizeAddress(req.socket.remoteAddress))) {
+      return reply.code(403).send({ error: 'forbidden', message: 'Data Hub is only reachable through Home Assistant ingress.' });
+    }
+  });
+
   app.addHook('preHandler', async (req: FastifyRequest, reply: FastifyReply) => {
     const minRole = req.routeOptions.config?.minRole;
-    if (minRole === undefined) return;
-    const token = req.cookies[SESSION_COOKIE];
-    if (token) {
-      const s = sessions.resolve(token);
-      if (s) {
-        req.user = users.get(s.userId);
-        if (s.slid) setSessionCookie(reply, token, s.expiresAt);
+    if (minRole === undefined || minRole === 'public') return;
+    const header = (h: string) => {
+      const v = req.headers[h];
+      return (Array.isArray(v) ? v[0] : v)?.trim() || undefined;
+    };
+    const haId = header('x-remote-user-id');
+    if (!haId) return reply.code(401).send({ error: 'unauthorized', message: 'No Home Assistant user on the request.' });
+    const name = header('x-remote-user-display-name') ?? header('x-remote-user-name') ?? haId;
+    const me = users.seen(haId, name);
+
+    let role: Role = me.role;
+    let roleSource: RequestUser['roleSource'] = me.mapped ? 'mapped' : 'unmapped';
+    let actingAs: RequestUser['actingAs'] = null;
+    let recordId = me.id;
+    const token = req.cookies[ELEVATION_COOKIE];
+    if (token && role === 'guest') {
+      const e = elevations.resolve(token, haId);
+      const acting = e ? users.get(e.userId) : null;
+      if (e && acting && acting.mapped && roleAtLeast(acting.role, 'crew')) {
+        // A PIN elevates a guest device to crew, never beyond.
+        role = 'crew';
+        roleSource = 'pin';
+        actingAs = { id: acting.id, name: acting.name, until: new Date(e.expiresAt).toISOString() };
+        recordId = acting.id;
       }
     }
-    if (minRole === 'public') return;
-    if (!req.user) return reply.code(401).send({ error: 'unauthorized' });
-    if (!roleAtLeast(req.user.role, minRole)) return reply.code(403).send({ error: 'forbidden' });
+    req.user = { haId, name: me.name, role, roleSource, actingAs, recordId, unitPrefs: me.unitPrefs };
+    if (!roleAtLeast(role, minRole)) return reply.code(403).send({ error: 'forbidden' });
   });
 
   app.setErrorHandler((err, _req, reply) => {
@@ -121,6 +167,16 @@ export async function buildApp(deps: AppDeps, opts: { logger?: boolean | object 
 
   await app.register(
     async (api) => {
+      // HA watchdog: process up and database writable. Signal K being down is not a failure.
+      api.get('/health', { config: { minRole: 'public' } }, async (_req, reply) => {
+        try {
+          deps.db.prepare('BEGIN IMMEDIATE').run();
+          deps.db.prepare('ROLLBACK').run();
+          return { ok: true };
+        } catch (e) {
+          return reply.code(503).send({ ok: false, error: (e as Error).message });
+        }
+      });
       registerAuthRoutes(api, ctx);
       registerPathRoutes(api, ctx);
       registerSystemRoutes(api, ctx);
@@ -129,11 +185,20 @@ export async function buildApp(deps: AppDeps, opts: { logger?: boolean | object 
     { prefix: API_PREFIX },
   );
 
+  // The web app. Ingress mounts it under a path HA chooses; index.html gets a
+  // <base> for that path so every relative URL resolves under it.
   const dist = deps.config.webDist;
   if (dist && existsSync(join(dist, 'index.html'))) {
-    await app.register(fastifyStatic, { root: dist, wildcard: false });
+    const template = readFileSync(join(dist, 'index.html'), 'utf8');
+    const renderIndex = (req: FastifyRequest, reply: FastifyReply) =>
+      reply
+        .type('text/html; charset=utf-8')
+        .header('cache-control', 'no-cache')
+        .send(template.replace('<head>', `<head><base href="${ingressBase(req)}/">`));
+    await app.register(fastifyStatic, { root: join(dist, 'assets'), prefix: '/assets/', immutable: true, maxAge: '365d' });
+    app.get('/', renderIndex);
     app.setNotFoundHandler((req, reply) => {
-      if (req.method === 'GET' && !req.url.startsWith('/api/')) return reply.sendFile('index.html');
+      if (req.method === 'GET' && !req.url.startsWith('/api/')) return renderIndex(req, reply);
       return reply.code(404).send({ error: 'not_found' });
     });
   }

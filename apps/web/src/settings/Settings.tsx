@@ -1,11 +1,11 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { roleAtLeast, type Role } from '@watchkeeper/shared';
-import { api, ApiError, useMe, useSystemStatus, useUsers } from '../api/client';
-import { Button, Card, FormField, PrimaryButton, SegmentedControl, StatusPill, formatAge } from '../shell/components';
+import { useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { roleAtLeast } from '@watchkeeper/shared';
+import { useMe, useSystemStatus } from '../api/client';
+import { Card, SegmentedControl, StatusPill, formatAge } from '../shell/components';
 import { useTheme } from '../theme/theme';
 import { PathBrowser } from './PathBrowser';
+import { RoleMapping } from './RoleMapping';
 import { UnitsForm } from './UnitsForm';
 
 function bytes(n: number | null): string {
@@ -16,6 +16,7 @@ function bytes(n: number | null): string {
 function SystemCard() {
   const s = useSystemStatus().data;
   if (!s) return <Card title="System status">Loading…</Card>;
+  const drift = s.time.driftMs;
   return (
     <Card title="System status">
       <dl className="kv" id="system">
@@ -25,25 +26,42 @@ function SystemCard() {
           <span className="mono">{s.signalk.url}</span>
         </dd>
         <dt>Device access</dt>
-        <dd>{s.signalk.authorized ? 'Approved' : 'No token (fine if Signal K security is off)'}</dd>
+        <dd>
+          {s.signalk.authorized
+            ? 'Approved'
+            : s.signalk.accessRequest === 'pending'
+              ? 'Waiting for approval in Signal K'
+              : s.signalk.accessRequest === 'not-required'
+                ? 'Not required (Signal K security is off)'
+                : s.signalk.accessRequest === 'denied'
+                  ? 'Denied in Signal K'
+                  : 'No token yet'}
+        </dd>
         <dt>GPS</dt>
         <dd>{s.gps.fix ? `Fix, ${formatAge(s.gps.ageMs)} old` : <StatusPill tone="warn">No fix</StatusPill>}</dd>
-        <dt>Clock</dt>
+        <dt>Log time</dt>
         <dd>
-          {s.clock.synced === null ? (
-            'Not reported (chrony not available)'
-          ) : s.clock.synced ? (
-            `Synced${s.clock.source ? ` to ${s.clock.source}` : ''}${s.clock.offsetMs !== null ? `, offset ${s.clock.offsetMs.toFixed(1)} ms` : ''}`
+          {s.time.source === 'gps' ? 'GPS' : <StatusPill tone="warn">Host clock (GPS time stale)</StatusPill>}
+          {drift !== null ? ` · host clock ${Math.abs(drift) < 1000 ? 'within 1 s' : `${(drift / 1000).toFixed(1)} s off`}` : ''}
+        </dd>
+        <dt>CPU temperature</dt>
+        <dd>
+          {s.cpuTempC === null ? (
+            'Not available'
+          ) : s.cpuTempC >= 78 ? (
+            <StatusPill tone="alarm">{s.cpuTempC.toFixed(0)} °C, near throttling</StatusPill>
+          ) : s.cpuTempC >= 70 ? (
+            <StatusPill tone="warn">{s.cpuTempC.toFixed(0)} °C, hot</StatusPill>
           ) : (
-            <StatusPill tone="warn">Not synced</StatusPill>
+            `${s.cpuTempC.toFixed(0)} °C`
           )}
         </dd>
         <dt>Disk free</dt>
         <dd>
           {bytes(s.disk.freeBytes)} of {bytes(s.disk.totalBytes)}
         </dd>
-        <dt>Last backup</dt>
-        <dd>{s.lastBackup ?? 'None yet'}</dd>
+        <dt>Last backup snapshot</dt>
+        <dd>{s.lastSnapshot ? new Date(s.lastSnapshot).toLocaleString() : 'None yet'}</dd>
         <dt>Version</dt>
         <dd>{s.version}</dd>
       </dl>
@@ -51,86 +69,24 @@ function SystemCard() {
   );
 }
 
-function UsersCard() {
-  const users = useUsers();
-  const qc = useQueryClient();
-  const [name, setName] = useState('');
-  const [role, setRole] = useState<Role>('crew');
-  const [pin, setPin] = useState('');
-  const [error, setError] = useState<string | null>(null);
-
-  const add = async () => {
-    setError(null);
-    try {
-      await api('/users', { method: 'POST', body: { name, role, pin } });
-      setName('');
-      setPin('');
-      await qc.invalidateQueries({ queryKey: ['users'] });
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not add the user.');
-    }
-  };
-
-  return (
-    <Card title="Users">
-      <div className="stack">
-        <ul className="menu-list" style={{ gap: 4 }}>
-          {(users.data ?? []).map((u) => (
-            <li key={u.id} className="row" style={{ justifyContent: 'space-between', minHeight: 44 }}>
-              <span style={{ fontWeight: 600 }}>{u.name}</span>
-              <span className="label">{u.role}</span>
-            </li>
-          ))}
-        </ul>
-        <form className="stack" onSubmit={(e) => { e.preventDefault(); void add(); }}>
-          <div className="grid-2">
-            <FormField label="Name">{(id) => <input id={id} className="input" value={name} onChange={(e) => setName(e.target.value)} required />}</FormField>
-            <FormField label="PIN" hint="4 to 8 digits">
-              {(id) => <input id={id} className="input" type="password" inputMode="numeric" autoComplete="new-password" value={pin} onChange={(e) => setPin(e.target.value)} required />}
-            </FormField>
-          </div>
-          <SegmentedControl<Role>
-            label="Role"
-            value={role}
-            onChange={setRole}
-            options={[
-              { value: 'crew', label: 'Crew' },
-              { value: 'guest', label: 'Guest' },
-              { value: 'skipper', label: 'Skipper' },
-            ]}
-          />
-          {error ? <div className="field__error" role="alert">{error}</div> : null}
-          <div>
-            <PrimaryButton type="submit">Add user</PrimaryButton>
-          </div>
-        </form>
-      </div>
-    </Card>
-  );
-}
-
 export function SettingsScreen() {
   const me = useMe().data;
   const { theme, setTheme } = useTheme();
-  const qc = useQueryClient();
-  const navigate = useNavigate();
   const role = me?.role ?? 'guest';
 
   useEffect(() => {
     if (location.hash === '#system') document.getElementById('system')?.scrollIntoView();
   }, []);
 
-  const logout = async () => {
-    await api('/auth/logout', { method: 'POST' }).catch(() => undefined);
-    qc.clear();
-    navigate('/login', { replace: true });
-  };
-
   return (
     <>
       <div className="screen-head">
         <h1 className="screen-title">Settings</h1>
-        <Button onClick={() => void logout()}>Sign out{me ? ` ${me.name}` : ''}</Button>
+        {me ? (
+          <span className="muted" style={{ fontSize: 14 }}>
+            {me.actingAs ? `${me.name}, acting as ${me.actingAs.name}` : me.name} · {role}
+          </span>
+        ) : null}
       </div>
       <SystemCard />
       <Card title="Display on this device">
@@ -144,13 +100,27 @@ export function SettingsScreen() {
           ]}
         />
       </Card>
+      {role === 'guest' || me?.actingAs ? (
+        <Card title="Helm sign-in">
+          <p style={{ margin: '0 0 10px' }}>
+            {me?.actingAs ? `Acting as ${me.actingAs.name} until ${new Date(me.actingAs.until).toLocaleTimeString()}.` : 'Shared helm device? Crew can sign in with their PIN.'}
+          </p>
+          <Link to="/login" className="button">
+            {me?.actingAs ? 'Manage helm sign-in' : 'Sign in with PIN'}
+          </Link>
+        </Card>
+      ) : null}
       <Card title="Units">
-        {roleAtLeast(role, 'crew') ? <UnitsForm /> : <p className="muted" style={{ margin: 0 }}>Guests use the default units.</p>}
+        {roleAtLeast(role, 'crew') && !me?.actingAs ? <UnitsForm /> : <p className="muted" style={{ margin: 0 }}>Units are saved per Home Assistant user; guests use the defaults.</p>}
       </Card>
+      {roleAtLeast(role, 'skipper') ? (
+        <Card title="Roles">
+          <RoleMapping />
+        </Card>
+      ) : null}
       <Card title="Signal K paths">
         <PathBrowser />
       </Card>
-      {roleAtLeast(role, 'skipper') ? <UsersCard /> : null}
     </>
   );
 }
